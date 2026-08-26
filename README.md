@@ -6,7 +6,7 @@ This was created to dynamically change the volume of an Android Radio based on s
 
 * What speed triggers volume increase
 * Amount of volume increase
-* How long at that speed to make it effective
+* How long you need to be at that speed before volume increase is effective (I didn't want the volume to be changing if I was just at the new speed for a few seconds and then slowed down)
 
 
 
