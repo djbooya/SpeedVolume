@@ -52,6 +52,9 @@ class MainActivity : AppCompatActivity() {
 
         applyStatusBarInsetPadding()
         populateFromSettings(settingsRepository.load())
+        updateVersionDisplay()
+
+        binding.buttonViewLogs.setOnClickListener { viewLogs() }
 
         binding.switchMaster.setOnCheckedChangeListener { _, isChecked ->
             DebugLog.d("MainActivity", "Master switch toggled: $isChecked")
@@ -223,5 +226,42 @@ class MainActivity : AppCompatActivity() {
             data = Uri.parse("package:$packageName")
         }
         startActivity(intent)
+    }
+
+    private fun updateVersionDisplay() {
+        try {
+            val buildConfigClass = Class.forName("com.djbooya.speedvolume.BuildConfig")
+            val versionNameField = buildConfigClass.getField("VERSION_NAME")
+            val versionName = versionNameField.get(null) as String
+            binding.textVersion.text = "Version: $versionName"
+        } catch (e: Exception) {
+            binding.textVersion.text = "Version: 1.4"
+            DebugLog.e("MainActivity", "Failed to get version from BuildConfig", e)
+        }
+    }
+
+    private fun viewLogs() {
+        val logFile = DebugLog.getLogFile()
+        if (logFile == null || !logFile.exists()) {
+            Toast.makeText(this, "No logs available yet.", Toast.LENGTH_SHORT).show()
+            DebugLog.d("MainActivity", "View Logs: Log file not found")
+            return
+        }
+
+        DebugLog.d("MainActivity", "Opening log file: ${logFile.absolutePath}")
+        val intent = Intent(Intent.ACTION_VIEW).apply {
+            setDataAndType(Uri.fromFile(logFile), "text/plain")
+        }
+
+        try {
+            startActivity(intent)
+        } catch (e: Exception) {
+            DebugLog.e("MainActivity", "Failed to open log file", e)
+            Toast.makeText(
+                this,
+                "Cannot open logs. Log file location:\n${logFile.absolutePath}",
+                Toast.LENGTH_LONG
+            ).show()
+        }
     }
 }

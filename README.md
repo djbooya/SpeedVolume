@@ -89,6 +89,12 @@ The app writes detailed debug logs to help troubleshoot boot and runtime issues.
 
 ## Release Notes
 
+### v1.4 (Aug 27, 2024)
+- **Added:** Version number display on main screen for easy identification
+- **Added:** "View Logs" button to open debug log file directly from app
+- **Improved:** Users can now quickly access logs without file manager navigation
+- **Updated:** APK filename to `SpeedVolume-1.4-debug.apk`
+
 ### v1.3 (Aug 26, 2024)
 - **Added:** Comprehensive debug logging to `Android/data/com.djbooya.speedvolume.debug/files/logs/speedvolume.log`
 - **Added:** Detailed logs for boot events, service lifecycle, location updates, and tier state changes
@@ -142,7 +148,7 @@ export JAVA_HOME="/path/to/Android/Studio/jbr"
 ./gradlew assembleDebug
 ```
 
-Output APK: `app/build/outputs/apk/debug/SpeedVolume-1.3-debug.apk`
+Output APK: `app/build/outputs/apk/debug/SpeedVolume-1.4-debug.apk`
 
 For a release build:
 ```bash
