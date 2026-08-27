@@ -89,30 +89,30 @@ The app writes detailed debug logs to help troubleshoot boot and runtime issues.
 
 ## Release Notes
 
-### v1.4 (Aug 27, 2024)
+### v1.4 (Aug 27, 2026)
 - **Added:** Version number display on main screen for easy identification
 - **Added:** "View Logs" button to open debug log file directly from app
 - **Improved:** Users can now quickly access logs without file manager navigation
 - **Updated:** APK filename to `SpeedVolume-1.4-debug.apk`
 
-### v1.3 (Aug 26, 2024)
+### v1.3 (Aug 26, 2026)
 - **Added:** Comprehensive debug logging to `Android/data/com.djbooya.speedvolume.debug/files/logs/speedvolume.log`
 - **Added:** Detailed logs for boot events, service lifecycle, location updates, and tier state changes
 - **Added:** Automatic cleanup of logs older than 24 hours
 - **Improved:** Boot and resume diagnostics — logs show exactly why service may not start or continue running
 - **Updated:** APK filename to `SpeedVolume-1.3-debug.apk`
 
-### v1.2 (Aug 26, 2024)
+### v1.2 (Aug 26, 2026)
 - **Improved:** Permission buttons now show confirmation toast if permission is already granted (user knows nothing needs to happen)
 - **Updated:** APK filename updated to `SpeedVolume-1.2-debug.apk`
 
-### v1.1 (Aug 25, 2024)
+### v1.1 (Aug 25, 2026)
 - **Fixed:** Service now starts on boot even if location permission was not yet granted (service checks permission at start)
 - **Fixed:** Service resumes location tracking after device wakes from sleep (detects SCREEN_ON and re-enables GPS)
 - **Improved:** Volume boost now tracks baseline volume — manual adjustments by user are preserved when boosts are applied/removed
 - **Updated:** APK filename now includes version (e.g., `SpeedVolume-1.1-debug.apk`)
 
-### v1.0 (Aug 23, 2024)
+### v1.0 (Aug 23, 2026)
 - **Initial release**
 - GPS-based volume scaling with two configurable tiers
 - Dwell timer to prevent boost churn
