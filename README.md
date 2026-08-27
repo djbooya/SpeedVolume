@@ -14,7 +14,7 @@ A lightweight Android foreground service for car head units that dynamically adj
 
 ## Installation
 
-1. Download the latest APK (`SpeedVolume-*.apk`)
+1. Download the latest APK (`SpeedVolume-*.apk`) - https://github.com/djbooya/SpeedVolume/tree/main/app/build/outputs/apk/debug
 2. Copy to a USB drive or radio storage
 3. On the radio, enable "install unknown apps" for your file manager and open the APK
 4. Grant location permission
