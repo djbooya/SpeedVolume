@@ -61,7 +61,7 @@ class MainActivity : AppCompatActivity() {
 
         binding.buttonGrantLocation.setOnClickListener {
             if (hasLocationPermission()) {
-                Toast.makeText(this, R.string.grant_location_button, Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, "Location permission already granted.", Toast.LENGTH_SHORT).show()
             } else {
                 requestLocationPermission.launch(Manifest.permission.ACCESS_FINE_LOCATION)
             }
@@ -202,7 +202,7 @@ class MainActivity : AppCompatActivity() {
     private fun requestIgnoreBatteryOptimizations() {
         val powerManager = getSystemService(POWER_SERVICE) as PowerManager
         if (powerManager.isIgnoringBatteryOptimizations(packageName)) {
-            Toast.makeText(this, R.string.ignore_battery_button, Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, "Battery optimization already disabled for this app.", Toast.LENGTH_SHORT).show()
             return
         }
         val intent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {

@@ -12,17 +12,27 @@ android {
         applicationId = "com.djbooya.speedvolume"
         minSdk = 26
         targetSdk = 35
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = 3
+        versionName = "1.2"
     }
 
     buildTypes {
+        debug {
+            applicationIdSuffix = ".debug"
+        }
         release {
             isMinifyEnabled = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+        }
+    }
+
+    applicationVariants.all {
+        outputs.all {
+            (this as com.android.build.gradle.internal.api.ApkVariantOutputImpl).outputFileName =
+                "SpeedVolume-${defaultConfig.versionName}-${buildType.name}.apk"
         }
     }
     compileOptions {

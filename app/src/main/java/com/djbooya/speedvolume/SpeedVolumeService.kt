@@ -3,10 +3,12 @@ package com.djbooya.speedvolume
 import android.Manifest
 import android.app.Notification
 import android.app.NotificationChannel
+import android.content.Context
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.app.Service
 import android.content.Intent
+import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.location.Location
 import android.location.LocationListener
@@ -14,6 +16,8 @@ import android.location.LocationManager
 import android.media.AudioManager
 import android.os.Build
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.os.SystemClock
 import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationCompat
@@ -23,6 +27,9 @@ import kotlin.math.roundToInt
  * Foreground service that reads GPS speed and nudges the media volume up
  * in up to two configurable tiers, reverting each tier's boost once speed
  * drops back below its threshold.
+ *
+ * Tracks volume baseline (the volume without any boosts) to preserve manual
+ * adjustments made by the user after a boost is applied.
  */
 class SpeedVolumeService : Service() {
 
@@ -31,14 +38,21 @@ class SpeedVolumeService : Service() {
     private lateinit var settingsRepository: SettingsRepository
     private lateinit var settings: AppSettings
 
+    private val handler = Handler(Looper.getMainLooper())
+    private val screenReceiver = ScreenReceiver()
+
     private var tier1AboveSince: Long? = null
     private var tier1Engaged: Boolean = false
     private var tier2AboveSince: Long? = null
     private var tier2Engaged: Boolean = false
 
+    private var volumeBaseline: Int = -1
+    private var currentTier1Boost: Int = 0
+    private var currentTier2Boost: Int = 0
+
     private val locationListener = object : LocationListener {
         override fun onLocationChanged(location: Location) {
-            handleLocation(location)
+            handler.post { handleLocation(location) }
         }
 
         @Deprecated("Deprecated in Java")
@@ -57,44 +71,102 @@ class SpeedVolumeService : Service() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         settings = settingsRepository.load()
 
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
+            != PackageManager.PERMISSION_GRANTED
+        ) {
+            ServiceStatus.update { it.copy(running = false) }
+            stopSelf()
+            return START_NOT_STICKY
+        }
+
         startForeground(NOTIFICATION_ID, buildNotification(null))
         ServiceStatus.update {
             it.copy(running = true, speedUnit = settings.speedUnit, hasFix = false)
         }
+
+        volumeBaseline = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC)
         startLocationUpdates()
+        registerScreenReceiver()
+        scheduleLocationUpdateCheck()
+
         return START_STICKY
     }
 
     override fun onDestroy() {
         super.onDestroy()
-        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+        handler.removeCallbacksAndMessages(null)
+        ScreenReceiver.clearService()
+        try {
+            unregisterReceiver(screenReceiver)
+        } catch (e: Exception) {
+            // receiver might not be registered
+        }
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
+            == PackageManager.PERMISSION_GRANTED
+        ) {
             locationManager.removeUpdates(locationListener)
         }
-        // Revert any active boosts so we don't leave the volume artificially high.
-        if (tier1Engaged) {
-            adjustVolume(-settings.tier1.volumeIncreaseSteps)
-            tier1Engaged = false
-        }
-        if (tier2Engaged) {
-            adjustVolume(-settings.tier2.volumeIncreaseSteps)
-            tier2Engaged = false
-        }
+        revertAllBoosts()
         ServiceStatus.update { it.copy(running = false, tier1Engaged = false, tier2Engaged = false) }
     }
 
     override fun onBind(intent: Intent?) = null
 
+    private fun registerScreenReceiver() {
+        val filter = IntentFilter().apply {
+            addAction(Intent.ACTION_SCREEN_ON)
+        }
+        ScreenReceiver.setService(this)
+        registerReceiver(screenReceiver, filter, Context.RECEIVER_EXPORTED)
+    }
+
     private fun startLocationUpdates() {
-        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-            stopSelf()
-            return
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
+            != PackageManager.PERMISSION_GRANTED
+        ) return
+
+        try {
+            val providers = locationManager.getProviders(true)
+            if (LocationManager.GPS_PROVIDER in providers) {
+                locationManager.requestLocationUpdates(
+                    LocationManager.GPS_PROVIDER,
+                    MIN_UPDATE_MS,
+                    0f,
+                    locationListener
+                )
+            }
+            if (LocationManager.NETWORK_PROVIDER in providers) {
+                locationManager.requestLocationUpdates(
+                    LocationManager.NETWORK_PROVIDER,
+                    MIN_UPDATE_MS,
+                    0f,
+                    locationListener
+                )
+            }
+        } catch (e: Exception) {
+            // Permission or provider error; service will gracefully degrade.
         }
-        val providers = locationManager.getProviders(true)
-        if (LocationManager.GPS_PROVIDER in providers) {
-            locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, MIN_UPDATE_MS, 0f, locationListener)
-        }
-        if (LocationManager.NETWORK_PROVIDER in providers) {
-            locationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, MIN_UPDATE_MS, 0f, locationListener)
+    }
+
+    private fun scheduleLocationUpdateCheck() {
+        handler.postDelayed({
+            if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
+                == PackageManager.PERMISSION_GRANTED
+            ) {
+                try {
+                    locationManager.removeUpdates(locationListener)
+                    startLocationUpdates()
+                } catch (e: Exception) {
+                    // Ignore; will retry on next check
+                }
+            }
+            scheduleLocationUpdateCheck()
+        }, LOCATION_UPDATE_RESTART_MS)
+    }
+
+    fun onScreenOn() {
+        handler.post {
+            startLocationUpdates()
         }
     }
 
@@ -113,13 +185,21 @@ class SpeedVolumeService : Service() {
             val result = evaluateTier(settings.tier1, speedInUnit, now, tier1AboveSince, tier1Engaged)
             tier1AboveSince = result.aboveSince
             tier1Engaged = result.engaged
+            currentTier1Boost = if (result.engaged) settings.tier1.volumeIncreaseSteps else 0
+        } else {
+            currentTier1Boost = 0
         }
+
         if (settings.tier2.enabled) {
             val result = evaluateTier(settings.tier2, speedInUnit, now, tier2AboveSince, tier2Engaged)
             tier2AboveSince = result.aboveSince
             tier2Engaged = result.engaged
+            currentTier2Boost = if (result.engaged) settings.tier2.volumeIncreaseSteps else 0
+        } else {
+            currentTier2Boost = 0
         }
 
+        applyVolumeBoost()
         ServiceStatus.update {
             it.copy(
                 currentSpeed = speedInUnit,
@@ -133,7 +213,6 @@ class SpeedVolumeService : Service() {
 
     private data class TierEvalResult(val aboveSince: Long?, val engaged: Boolean)
 
-    /** Runs the dwell-timer state machine for one tier and applies/reverts its volume delta. */
     private fun evaluateTier(
         tier: TierConfig,
         speedInUnit: Int,
@@ -144,25 +223,44 @@ class SpeedVolumeService : Service() {
         if (speedInUnit >= tier.speedThreshold) {
             val since = aboveSince ?: now
             if (!currentlyEngaged && now - since >= tier.dwellSeconds * 1000L) {
-                adjustVolume(tier.volumeIncreaseSteps)
                 return TierEvalResult(since, true)
             }
             return TierEvalResult(since, currentlyEngaged)
         } else {
-            if (currentlyEngaged) {
-                adjustVolume(-tier.volumeIncreaseSteps)
-            }
             return TierEvalResult(null, false)
         }
     }
 
-    private fun adjustVolume(deltaSteps: Int) {
-        if (deltaSteps == 0) return
+    /**
+     * Applies boosts based on engaged tiers, respecting manual volume changes.
+     * Tracks the volume baseline (user's desired base) and adds the sum of active boosts.
+     */
+    private fun applyVolumeBoost() {
+        val targetBoost = currentTier1Boost + currentTier2Boost
         val max = audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
         val min = audioManager.getStreamMinVolume(AudioManager.STREAM_MUSIC)
         val current = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC)
-        val target = (current + deltaSteps).coerceIn(min, max)
-        audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, target, 0)
+
+        val expectedVolume = (volumeBaseline + currentTier1Boost + currentTier2Boost).coerceIn(min, max)
+
+        if (current != expectedVolume) {
+            if (current >= min && current <= max) {
+                volumeBaseline = (current - targetBoost).coerceIn(min, max)
+            }
+        }
+
+        val newTarget = (volumeBaseline + targetBoost).coerceIn(min, max)
+        if (current != newTarget) {
+            audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, newTarget, 0)
+        }
+    }
+
+    private fun revertAllBoosts() {
+        if (tier1Engaged || tier2Engaged) {
+            currentTier1Boost = 0
+            currentTier2Boost = 0
+            applyVolumeBoost()
+        }
     }
 
     private fun buildNotification(speedInUnit: Int?): Notification {
@@ -210,5 +308,6 @@ class SpeedVolumeService : Service() {
         private const val CHANNEL_ID = "speed_volume_service"
         private const val NOTIFICATION_ID = 1001
         private const val MIN_UPDATE_MS = 1000L
+        private const val LOCATION_UPDATE_RESTART_MS = 60000L
     }
 }
