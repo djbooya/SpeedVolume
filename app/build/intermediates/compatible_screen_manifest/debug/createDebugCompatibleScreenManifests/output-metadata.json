@@ -4,7 +4,7 @@
     "type": "COMPATIBLE_SCREEN_MANIFEST",
     "kind": "Directory"
   },
-  "applicationId": "com.djbooya.speedvolume",
+  "applicationId": "com.djbooya.speedvolume.debug",
   "variantName": "debug",
   "elements": []
 }
