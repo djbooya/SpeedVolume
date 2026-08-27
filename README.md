@@ -100,10 +100,6 @@ The app writes detailed debug logs to help troubleshoot boot and runtime issues.
 - **Improved:** Permission buttons now show confirmation toast if permission is already granted (user knows nothing needs to happen)
 - **Updated:** APK filename updated to `SpeedVolume-1.2-debug.apk`
 
-### v1.2 (Aug 26, 2024)
-- **Improved:** Permission buttons now show confirmation toast if permission is already granted (user knows nothing needs to happen)
-- **Updated:** APK filename updated to `SpeedVolume-1.2-debug.apk`
-
 ### v1.1 (Aug 25, 2024)
 - **Fixed:** Service now starts on boot even if location permission was not yet granted (service checks permission at start)
 - **Fixed:** Service resumes location tracking after device wakes from sleep (detects SCREEN_ON and re-enables GPS)
