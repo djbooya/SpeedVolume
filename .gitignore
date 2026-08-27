@@ -1,0 +1,32 @@
+# Gradle files
+.gradle/
+build/
+gradle-wrapper.jar
+
+# Android Studio
+.idea/
+*.iml
+*.apk
+*.aar
+local.properties
+
+# Build outputs
+app/build/
+*.class
+*.dex
+*.jar
+
+# Kotlin
+kotlin-classes/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+*.swp
+*.swo
+*~
+
+# Exception: Track release APKs
+!app/build/outputs/apk/debug/*.apk
