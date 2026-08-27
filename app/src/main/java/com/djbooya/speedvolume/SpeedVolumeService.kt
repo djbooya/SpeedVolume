@@ -63,48 +63,58 @@ class SpeedVolumeService : Service() {
 
     override fun onCreate() {
         super.onCreate()
+        DebugLog.init(this)
+        DebugLog.d("SpeedVolumeService", "Service created")
         locationManager = getSystemService(LOCATION_SERVICE) as LocationManager
         audioManager = getSystemService(AUDIO_SERVICE) as AudioManager
         settingsRepository = SettingsRepository(this)
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        DebugLog.d("SpeedVolumeService", "onStartCommand called")
         settings = settingsRepository.load()
+        DebugLog.d("SpeedVolumeService", "Settings loaded: enabled=${settings.masterEnabled}")
 
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
             != PackageManager.PERMISSION_GRANTED
         ) {
+            DebugLog.e("SpeedVolumeService", "Location permission NOT granted - stopping service")
             ServiceStatus.update { it.copy(running = false) }
             stopSelf()
             return START_NOT_STICKY
         }
 
+        DebugLog.d("SpeedVolumeService", "Location permission granted - starting service")
         startForeground(NOTIFICATION_ID, buildNotification(null))
         ServiceStatus.update {
             it.copy(running = true, speedUnit = settings.speedUnit, hasFix = false)
         }
 
         volumeBaseline = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC)
+        DebugLog.d("SpeedVolumeService", "Volume baseline set to: $volumeBaseline")
         startLocationUpdates()
         registerScreenReceiver()
         scheduleLocationUpdateCheck()
+        DebugLog.d("SpeedVolumeService", "Service started successfully")
 
         return START_STICKY
     }
 
     override fun onDestroy() {
         super.onDestroy()
+        DebugLog.d("SpeedVolumeService", "Service destroyed")
         handler.removeCallbacksAndMessages(null)
         ScreenReceiver.clearService()
         try {
             unregisterReceiver(screenReceiver)
         } catch (e: Exception) {
-            // receiver might not be registered
+            DebugLog.d("SpeedVolumeService", "Screen receiver not registered: ${e.message}")
         }
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
             == PackageManager.PERMISSION_GRANTED
         ) {
             locationManager.removeUpdates(locationListener)
+            DebugLog.d("SpeedVolumeService", "Location updates stopped")
         }
         revertAllBoosts()
         ServiceStatus.update { it.copy(running = false, tier1Engaged = false, tier2Engaged = false) }
@@ -123,10 +133,14 @@ class SpeedVolumeService : Service() {
     private fun startLocationUpdates() {
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
             != PackageManager.PERMISSION_GRANTED
-        ) return
+        ) {
+            DebugLog.e("SpeedVolumeService", "startLocationUpdates: permission denied")
+            return
+        }
 
         try {
             val providers = locationManager.getProviders(true)
+            DebugLog.d("SpeedVolumeService", "Available providers: $providers")
             if (LocationManager.GPS_PROVIDER in providers) {
                 locationManager.requestLocationUpdates(
                     LocationManager.GPS_PROVIDER,
@@ -134,6 +148,7 @@ class SpeedVolumeService : Service() {
                     0f,
                     locationListener
                 )
+                DebugLog.d("SpeedVolumeService", "GPS provider location updates requested")
             }
             if (LocationManager.NETWORK_PROVIDER in providers) {
                 locationManager.requestLocationUpdates(
@@ -142,9 +157,10 @@ class SpeedVolumeService : Service() {
                     0f,
                     locationListener
                 )
+                DebugLog.d("SpeedVolumeService", "Network provider location updates requested")
             }
         } catch (e: Exception) {
-            // Permission or provider error; service will gracefully degrade.
+            DebugLog.e("SpeedVolumeService", "Failed to start location updates", e)
         }
     }
 
@@ -171,30 +187,42 @@ class SpeedVolumeService : Service() {
     }
 
     private fun handleLocation(location: Location) {
-        if (!location.hasSpeed()) return
+        if (!location.hasSpeed()) {
+            DebugLog.d("SpeedVolumeService", "Location received but no speed data")
+            return
+        }
 
         val speedMps = location.speed
         val speedInUnit = when (settings.speedUnit) {
             SpeedUnit.KMH -> speedMps * 3.6
             SpeedUnit.MPH -> speedMps * 2.23694
         }.roundToInt()
+        DebugLog.d("SpeedVolumeService", "Speed: $speedInUnit ${settings.speedUnit.name}")
 
         val now = SystemClock.elapsedRealtime()
 
         if (settings.tier1.enabled) {
             val result = evaluateTier(settings.tier1, speedInUnit, now, tier1AboveSince, tier1Engaged)
+            val stateChanged = tier1Engaged != result.engaged
             tier1AboveSince = result.aboveSince
             tier1Engaged = result.engaged
             currentTier1Boost = if (result.engaged) settings.tier1.volumeIncreaseSteps else 0
+            if (stateChanged) {
+                DebugLog.d("SpeedVolumeService", "Tier 1: ${if (result.engaged) "ENGAGED (+${settings.tier1.volumeIncreaseSteps})" else "DISENGAGED"}")
+            }
         } else {
             currentTier1Boost = 0
         }
 
         if (settings.tier2.enabled) {
             val result = evaluateTier(settings.tier2, speedInUnit, now, tier2AboveSince, tier2Engaged)
+            val stateChanged = tier2Engaged != result.engaged
             tier2AboveSince = result.aboveSince
             tier2Engaged = result.engaged
             currentTier2Boost = if (result.engaged) settings.tier2.volumeIncreaseSteps else 0
+            if (stateChanged) {
+                DebugLog.d("SpeedVolumeService", "Tier 2: ${if (result.engaged) "ENGAGED (+${settings.tier2.volumeIncreaseSteps})" else "DISENGAGED"}")
+            }
         } else {
             currentTier2Boost = 0
         }

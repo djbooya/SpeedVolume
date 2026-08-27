@@ -65,7 +65,40 @@ If checked, the service restarts automatically after a radio reboot (requires lo
 - `RECEIVE_BOOT_COMPLETED` — auto-start after radio reboot
 - `REQUEST_IGNORE_BATTERY_OPTIMIZATIONS` — preserve service across battery optimization
 
+## Debug Logs
+
+The app writes detailed debug logs to help troubleshoot boot and runtime issues.
+
+**Log Location:** `Android/data/com.djbooya.speedvolume.debug/files/logs/speedvolume.log` (accessible via File Manager)
+
+**Log Contents:**
+- Boot broadcast reception and service start decisions
+- Service lifecycle events (onCreate, onStartCommand, onDestroy)
+- Location provider availability and GPS/Network updates
+- Permission checks
+- Tier engagement/disengagement with speed values
+- Volume baseline adjustments
+
+**Automatic Cleanup:** Logs older than 24 hours are automatically deleted on service startup.
+
+**How to Access:**
+1. Open File Manager on the radio
+2. Navigate to: `Android/data/com.djbooya.speedvolume.debug/files/logs/`
+3. Open `speedvolume.log` with a text editor
+4. Look for ERROR/WARN messages to diagnose issues
+
 ## Release Notes
+
+### v1.3 (Aug 26, 2024)
+- **Added:** Comprehensive debug logging to `Android/data/com.djbooya.speedvolume.debug/files/logs/speedvolume.log`
+- **Added:** Detailed logs for boot events, service lifecycle, location updates, and tier state changes
+- **Added:** Automatic cleanup of logs older than 24 hours
+- **Improved:** Boot and resume diagnostics — logs show exactly why service may not start or continue running
+- **Updated:** APK filename to `SpeedVolume-1.3-debug.apk`
+
+### v1.2 (Aug 26, 2024)
+- **Improved:** Permission buttons now show confirmation toast if permission is already granted (user knows nothing needs to happen)
+- **Updated:** APK filename updated to `SpeedVolume-1.2-debug.apk`
 
 ### v1.2 (Aug 26, 2024)
 - **Improved:** Permission buttons now show confirmation toast if permission is already granted (user knows nothing needs to happen)
@@ -113,7 +146,7 @@ export JAVA_HOME="/path/to/Android/Studio/jbr"
 ./gradlew assembleDebug
 ```
 
-Output APK: `app/build/outputs/apk/debug/SpeedVolume-1.2-debug.apk`
+Output APK: `app/build/outputs/apk/debug/SpeedVolume-1.3-debug.apk`
 
 For a release build:
 ```bash

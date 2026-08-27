@@ -47,14 +47,19 @@ class MainActivity : AppCompatActivity() {
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
         settingsRepository = SettingsRepository(this)
+        DebugLog.init(this)
+        DebugLog.d("MainActivity", "App opened")
 
         applyStatusBarInsetPadding()
         populateFromSettings(settingsRepository.load())
 
         binding.switchMaster.setOnCheckedChangeListener { _, isChecked ->
+            DebugLog.d("MainActivity", "Master switch toggled: $isChecked")
             if (isChecked && !hasLocationPermission()) {
+                DebugLog.d("MainActivity", "Location permission not granted, requesting")
                 requestLocationPermission.launch(Manifest.permission.ACCESS_FINE_LOCATION)
             } else if (isChecked) {
+                DebugLog.d("MainActivity", "Location permission granted, checking notification permission")
                 maybeRequestNotificationPermission()
             }
         }
@@ -70,13 +75,16 @@ class MainActivity : AppCompatActivity() {
         binding.buttonIgnoreBattery.setOnClickListener { requestIgnoreBatteryOptimizations() }
 
         binding.buttonSave.setOnClickListener {
+            DebugLog.d("MainActivity", "Save button pressed")
             val settings = collectFromUi()
+            DebugLog.d("MainActivity", "Saving settings: enabled=${settings.masterEnabled}, tier1=${settings.tier1.enabled}, tier2=${settings.tier2.enabled}")
             settingsRepository.save(settings)
             applyServiceState(settings)
             finish()
         }
 
         binding.buttonCancel.setOnClickListener {
+            DebugLog.d("MainActivity", "Cancel button pressed - discarding changes")
             // Discard any in-memory UI changes; nothing was persisted, nothing to undo.
             finish()
         }
@@ -185,13 +193,19 @@ class MainActivity : AppCompatActivity() {
 
     /** Applies the just-saved settings to the running service: (re)start, or stop. */
     private fun applyServiceState(settings: AppSettings) {
+        DebugLog.d("MainActivity", "Applying service state: enabled=${settings.masterEnabled}")
         stopService(Intent(this, SpeedVolumeService::class.java))
+        DebugLog.d("MainActivity", "Service stopped (if running)")
         if (settings.masterEnabled) {
             if (hasLocationPermission()) {
+                DebugLog.d("MainActivity", "Starting service with location permission")
                 startServiceCompat()
             } else {
+                DebugLog.w("MainActivity", "Cannot start service - location permission missing")
                 Toast.makeText(this, R.string.permission_rationale, Toast.LENGTH_LONG).show()
             }
+        } else {
+            DebugLog.d("MainActivity", "Service disabled by user")
         }
     }
 
