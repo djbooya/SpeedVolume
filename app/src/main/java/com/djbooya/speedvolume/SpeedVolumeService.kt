@@ -72,19 +72,23 @@ class SpeedVolumeService : Service() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         DebugLog.d("SpeedVolumeService", "onStartCommand called")
+        android.util.Log.d("SpeedVolume", "onStartCommand called")
         settings = settingsRepository.load()
         DebugLog.d("SpeedVolumeService", "Settings loaded: enabled=${settings.masterEnabled}")
+        android.util.Log.d("SpeedVolume", "Settings: tier1=${settings.tier1.enabled}@${settings.tier1.speedThreshold}, tier2=${settings.tier2.enabled}@${settings.tier2.speedThreshold}")
 
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
             != PackageManager.PERMISSION_GRANTED
         ) {
             DebugLog.e("SpeedVolumeService", "Location permission NOT granted - stopping service")
+            android.util.Log.e("SpeedVolume", "Location permission NOT granted")
             ServiceStatus.update { it.copy(running = false) }
             stopSelf()
             return START_NOT_STICKY
         }
 
         DebugLog.d("SpeedVolumeService", "Location permission granted - starting service")
+        android.util.Log.d("SpeedVolume", "Location permission granted")
         startForeground(NOTIFICATION_ID, buildNotification(null))
         ServiceStatus.update {
             it.copy(running = true, speedUnit = settings.speedUnit, hasFix = false)
@@ -92,11 +96,13 @@ class SpeedVolumeService : Service() {
 
         volumeBaseline = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC)
         DebugLog.d("SpeedVolumeService", "Volume baseline set to: $volumeBaseline")
+        android.util.Log.d("SpeedVolume", "Volume baseline: $volumeBaseline")
         startLocationUpdates()
         registerScreenReceiver()
         scheduleLocationUpdateCheck()
         ServiceRestartAlarm.scheduleRestartAlarm(this)
         DebugLog.d("SpeedVolumeService", "Service started successfully")
+        android.util.Log.d("SpeedVolume", "Service started - listening for GPS")
 
         return START_STICKY
     }
@@ -191,6 +197,7 @@ class SpeedVolumeService : Service() {
     private fun handleLocation(location: Location) {
         if (!location.hasSpeed()) {
             DebugLog.d("SpeedVolumeService", "Location received but no speed data")
+            android.util.Log.d("SpeedVolume", "Location: no speed data")
             return
         }
 
@@ -200,6 +207,7 @@ class SpeedVolumeService : Service() {
             SpeedUnit.MPH -> speedMps * 2.23694
         }.roundToInt()
         DebugLog.d("SpeedVolumeService", "Speed: $speedInUnit ${settings.speedUnit.name}")
+        android.util.Log.d("SpeedVolume", "Speed: $speedInUnit ${settings.speedUnit.name} | Tier1: engaged=$tier1Engaged, Tier2: engaged=$tier2Engaged")
 
         val now = SystemClock.elapsedRealtime()
 
