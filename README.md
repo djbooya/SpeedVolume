@@ -114,19 +114,6 @@ The app writes detailed debug logs to help troubleshoot boot and runtime issues.
 - **Improved:** Permission buttons now show confirmation toast if permission is already granted (user knows nothing needs to happen)
 - **Download:** [SpeedVolume-1.2-debug.apk](https://github.com/djbooya/SpeedVolume/raw/main/app/build/outputs/apk/debug/SpeedVolume-1.2-debug.apk)
 
-### v1.1 (Aug 25, 2026)
-- **Fixed:** Service now starts on boot even if location permission was not yet granted (service checks permission at start)
-- **Fixed:** Service resumes location tracking after device wakes from sleep (detects SCREEN_ON and re-enables GPS)
-- **Improved:** Volume boost now tracks baseline volume — manual adjustments by user are preserved when boosts are applied/removed
-- **Download:** [SpeedVolume-1.1-debug.apk](https://github.com/djbooya/SpeedVolume/raw/main/app/build/outputs/apk/debug/SpeedVolume-1.1-debug.apk)
-
-### v1.0 (Aug 23, 2026)
-- **Initial release**
-- GPS-based volume scaling with two configurable tiers
-- Dwell timer to prevent boost churn
-- Foreground service with persistent notification
-- Settings UI with Save/Cancel buttons
-- Boot auto-start option
 
 ## Troubleshooting
 
