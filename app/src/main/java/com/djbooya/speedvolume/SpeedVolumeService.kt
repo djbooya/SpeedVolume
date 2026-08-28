@@ -76,7 +76,10 @@ class SpeedVolumeService : Service() {
         android.util.Log.d("SpeedVolume", "onStartCommand called")
         settings = settingsRepository.load()
         DebugLog.d("SpeedVolumeService", "Settings loaded: enabled=${settings.masterEnabled}")
-        android.util.Log.d("SpeedVolume", "Settings: tier1=${settings.tier1.enabled}@${settings.tier1.speedThreshold}, tier2=${settings.tier2.enabled}@${settings.tier2.speedThreshold}")
+        DebugLog.d("SpeedVolumeService", "CONFIG: speedUnit=${settings.speedUnit.name}, startOnBoot=${settings.startOnBoot}")
+        DebugLog.d("SpeedVolumeService", "CONFIG: Tier1 enabled=${settings.tier1.enabled}, threshold=${settings.tier1.speedThreshold}${settings.speedUnit.name}, boost=+${settings.tier1.volumeIncreaseSteps}steps, dwell=${settings.tier1.dwellSeconds}s")
+        DebugLog.d("SpeedVolumeService", "CONFIG: Tier2 enabled=${settings.tier2.enabled}, threshold=${settings.tier2.speedThreshold}${settings.speedUnit.name}, boost=+${settings.tier2.volumeIncreaseSteps}steps, dwell=${settings.tier2.dwellSeconds}s")
+        android.util.Log.d("SpeedVolume", "CONFIG: T1=${settings.tier1.speedThreshold}@${settings.tier1.dwellSeconds}s+${settings.tier1.volumeIncreaseSteps}, T2=${settings.tier2.speedThreshold}@${settings.tier2.dwellSeconds}s+${settings.tier2.volumeIncreaseSteps}")
 
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
             != PackageManager.PERMISSION_GRANTED
