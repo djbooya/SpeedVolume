@@ -231,8 +231,8 @@ class MainActivity : AppCompatActivity() {
 
     private fun updateVersionDisplay() {
         try {
-            val packageName = packageName  // e.g., com.djbooya.speedvolume.debug
-            val buildConfigClass = Class.forName("$packageName.BuildConfig")
+            val basePackageName = packageName.replace(".debug", "")
+            val buildConfigClass = Class.forName("$basePackageName.BuildConfig")
             val versionNameField = buildConfigClass.getField("VERSION_NAME")
             val versionName = versionNameField.get(null) as String
             binding.textVersion.text = "Version: $versionName"
