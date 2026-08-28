@@ -214,12 +214,12 @@ class SpeedVolumeService : Service() {
             val stateChanged = tier1Engaged != result.engaged
             tier1AboveSince = result.aboveSince
             tier1Engaged = result.engaged
-            currentTier1Boost = if (result.engaged) settings.tier1.volumeIncreaseSteps else 0
             if (stateChanged) {
                 DebugLog.d("SpeedVolumeService", "Tier 1: ${if (result.engaged) "ENGAGED (+${settings.tier1.volumeIncreaseSteps})" else "DISENGAGED"}")
+                android.util.Log.d("SpeedVolume", "Tier 1: ${if (result.engaged) "ENGAGED" else "DISENGAGED"}")
             }
         } else {
-            currentTier1Boost = 0
+            tier1Engaged = false
         }
 
         if (settings.tier2.enabled) {
@@ -227,12 +227,12 @@ class SpeedVolumeService : Service() {
             val stateChanged = tier2Engaged != result.engaged
             tier2AboveSince = result.aboveSince
             tier2Engaged = result.engaged
-            currentTier2Boost = if (result.engaged) settings.tier2.volumeIncreaseSteps else 0
             if (stateChanged) {
                 DebugLog.d("SpeedVolumeService", "Tier 2: ${if (result.engaged) "ENGAGED (+${settings.tier2.volumeIncreaseSteps})" else "DISENGAGED"}")
+                android.util.Log.d("SpeedVolume", "Tier 2: ${if (result.engaged) "ENGAGED" else "DISENGAGED"}")
             }
         } else {
-            currentTier2Boost = 0
+            tier2Engaged = false
         }
 
         applyVolumeChanges()
