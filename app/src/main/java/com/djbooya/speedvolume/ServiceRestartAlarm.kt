@@ -5,6 +5,7 @@ import android.app.PendingIntent
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.os.SystemClock
 import androidx.core.content.ContextCompat
 
 class ServiceRestartAlarm : BroadcastReceiver() {
@@ -12,16 +13,22 @@ class ServiceRestartAlarm : BroadcastReceiver() {
         if (intent.action == ACTION_RESTART_SERVICE) {
             DebugLog.init(context)
             DebugLog.d("ServiceRestartAlarm", "Alarm triggered - checking if service needs restart")
+            android.util.Log.d("SpeedVolume", "=== ALARM TRIGGERED ===")
 
             val settings = SettingsRepository(context).load()
             if (!settings.masterEnabled) {
                 DebugLog.d("ServiceRestartAlarm", "Service disabled by user, not restarting")
+                android.util.Log.d("SpeedVolume", "Service disabled - skipping restart")
                 return
             }
 
             val serviceIntent = Intent(context, SpeedVolumeService::class.java)
             ContextCompat.startForegroundService(context, serviceIntent)
             DebugLog.d("ServiceRestartAlarm", "Service restart initiated")
+            android.util.Log.d("SpeedVolume", "Service restart initiated by alarm")
+
+            // Reschedule the alarm for next interval
+            scheduleRestartAlarm(context)
         }
     }
 
@@ -43,15 +50,17 @@ class ServiceRestartAlarm : BroadcastReceiver() {
             )
 
             try {
-                alarmManager.setRepeating(
+                val nextTriggerTime = SystemClock.elapsedRealtime() + INTERVAL_MS
+                alarmManager.setAndAllowWhileIdle(
                     AlarmManager.ELAPSED_REALTIME_WAKEUP,
-                    INTERVAL_MS,
-                    INTERVAL_MS,
+                    nextTriggerTime,
                     pendingIntent
                 )
-                DebugLog.d("ServiceRestartAlarm", "Alarm scheduled - checks every 30 minutes")
+                DebugLog.d("ServiceRestartAlarm", "Alarm scheduled - first check in 30 minutes, then every 30 minutes")
+                android.util.Log.d("SpeedVolume", "Alarm scheduled: first trigger in 30 min")
             } catch (e: Exception) {
                 DebugLog.e("ServiceRestartAlarm", "Failed to schedule alarm", e)
+                android.util.Log.e("SpeedVolume", "Alarm scheduling failed: ${e.message}")
             }
         }
 
