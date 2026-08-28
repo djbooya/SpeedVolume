@@ -89,6 +89,13 @@ The app writes detailed debug logs to help troubleshoot boot and runtime issues.
 
 ## Release Notes
 
+### v1.5 (Aug 28, 2024)
+- **Fixed:** View Logs button now visible and full-width on main screen
+- **Added:** AlarmManager to restart service every 30 minutes if killed
+- **Improved:** Service now survives device sleep/power cycle
+- **Fixed:** Resume from sleep — alarm wakes service when device resumes
+- **Updated:** APK filename to `SpeedVolume-1.5-debug.apk`
+
 ### v1.4 (Aug 27, 2024)
 - **Added:** Version number display on main screen for easy identification
 - **Added:** "View Logs" button to open debug log file directly from app
@@ -148,7 +155,7 @@ export JAVA_HOME="/path/to/Android/Studio/jbr"
 ./gradlew assembleDebug
 ```
 
-Output APK: `app/build/outputs/apk/debug/SpeedVolume-1.4-debug.apk`
+Output APK: `app/build/outputs/apk/debug/SpeedVolume-1.5-debug.apk`
 
 For a release build:
 ```bash

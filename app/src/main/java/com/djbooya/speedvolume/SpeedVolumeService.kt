@@ -95,6 +95,7 @@ class SpeedVolumeService : Service() {
         startLocationUpdates()
         registerScreenReceiver()
         scheduleLocationUpdateCheck()
+        ServiceRestartAlarm.scheduleRestartAlarm(this)
         DebugLog.d("SpeedVolumeService", "Service started successfully")
 
         return START_STICKY
@@ -105,6 +106,7 @@ class SpeedVolumeService : Service() {
         DebugLog.d("SpeedVolumeService", "Service destroyed")
         handler.removeCallbacksAndMessages(null)
         ScreenReceiver.clearService()
+        ServiceRestartAlarm.cancelRestartAlarm(this)
         try {
             unregisterReceiver(screenReceiver)
         } catch (e: Exception) {
