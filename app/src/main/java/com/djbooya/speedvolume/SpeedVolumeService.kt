@@ -70,6 +70,8 @@ class SpeedVolumeService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        DebugLog.d("SpeedVolumeService", "=== SERVICE STARTED v1.5 ===")
+        android.util.Log.d("SpeedVolume", "=== SERVICE STARTED v1.5 ===")
         DebugLog.d("SpeedVolumeService", "onStartCommand called")
         android.util.Log.d("SpeedVolume", "onStartCommand called")
         settings = settingsRepository.load()

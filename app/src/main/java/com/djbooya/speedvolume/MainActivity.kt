@@ -52,6 +52,8 @@ class MainActivity : AppCompatActivity() {
         DebugLog.d("MainActivity", "App opened")
 
         applyStatusBarInsetPadding()
+        DebugLog.d("MainActivity", "=== APP OPENED v1.5 ===")
+        android.util.Log.d("SpeedVolume", "=== APP OPENED v1.5 ===")
         populateFromSettings(settingsRepository.load())
         updateVersionDisplay()
 
