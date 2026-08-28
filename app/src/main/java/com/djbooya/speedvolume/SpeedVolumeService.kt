@@ -290,6 +290,11 @@ class SpeedVolumeService : Service() {
         val newTarget = (volumeBaseline + targetBoost).coerceIn(min, max)
         if (current != newTarget) {
             audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, newTarget, 0)
+            DebugLog.d("SpeedVolumeService", "Volume changed: $current -> $newTarget (baseline=$volumeBaseline, boost=$targetBoost)")
+            android.util.Log.d("SpeedVolume", "VOLUME: $current -> $newTarget (tier1=$currentTier1Boost + tier2=$currentTier2Boost)")
+        } else if (targetBoost > 0) {
+            DebugLog.d("SpeedVolumeService", "Volume already at target: $current (boost=$targetBoost)")
+            android.util.Log.d("SpeedVolume", "VOLUME STABLE: $current (target was $newTarget)")
         }
     }
 
