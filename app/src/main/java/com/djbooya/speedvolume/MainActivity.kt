@@ -231,13 +231,16 @@ class MainActivity : AppCompatActivity() {
 
     private fun updateVersionDisplay() {
         try {
-            val buildConfigClass = Class.forName("com.djbooya.speedvolume.BuildConfig")
+            val packageName = packageName  // e.g., com.djbooya.speedvolume.debug
+            val buildConfigClass = Class.forName("$packageName.BuildConfig")
             val versionNameField = buildConfigClass.getField("VERSION_NAME")
             val versionName = versionNameField.get(null) as String
             binding.textVersion.text = "Version: $versionName"
+            DebugLog.d("MainActivity", "Version loaded: $versionName")
         } catch (e: Exception) {
-            binding.textVersion.text = "Version: 1.4"
+            binding.textVersion.text = "Version: 1.5"
             DebugLog.e("MainActivity", "Failed to get version from BuildConfig", e)
+            android.util.Log.e("SpeedVolume", "Version error: ${e.message}")
         }
     }
 
