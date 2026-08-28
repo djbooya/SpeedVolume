@@ -230,18 +230,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun updateVersionDisplay() {
-        try {
-            val basePackageName = packageName.replace(".debug", "")
-            val buildConfigClass = Class.forName("$basePackageName.BuildConfig")
-            val versionNameField = buildConfigClass.getField("VERSION_NAME")
-            val versionName = versionNameField.get(null) as String
-            binding.textVersion.text = "Version: $versionName"
-            DebugLog.d("MainActivity", "Version loaded: $versionName")
-        } catch (e: Exception) {
-            binding.textVersion.text = "Version: 1.5"
-            DebugLog.e("MainActivity", "Failed to get version from BuildConfig", e)
-            android.util.Log.e("SpeedVolume", "Version error: ${e.message}")
-        }
+        binding.textVersion.text = "Version: 1.5"
     }
 
     private fun viewLogs() {
