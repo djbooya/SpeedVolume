@@ -46,7 +46,6 @@ class SpeedVolumeService : Service() {
     private var tier2AboveSince: Long? = null
     private var tier2Engaged: Boolean = false
 
-    private var volumeBaseline: Int = -1
     private var currentTier1Boost: Int = 0
     private var currentTier2Boost: Int = 0
 
@@ -94,9 +93,6 @@ class SpeedVolumeService : Service() {
             it.copy(running = true, speedUnit = settings.speedUnit, hasFix = false)
         }
 
-        volumeBaseline = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC)
-        DebugLog.d("SpeedVolumeService", "Volume baseline set to: $volumeBaseline")
-        android.util.Log.d("SpeedVolume", "Volume baseline: $volumeBaseline")
         startLocationUpdates()
         registerScreenReceiver()
         scheduleLocationUpdateCheck()
@@ -237,7 +233,7 @@ class SpeedVolumeService : Service() {
             currentTier2Boost = 0
         }
 
-        applyVolumeBoost()
+        applyVolumeChanges()
         ServiceStatus.update {
             it.copy(
                 currentSpeed = speedInUnit,
@@ -269,40 +265,47 @@ class SpeedVolumeService : Service() {
         }
     }
 
-    /**
-     * Applies boosts based on engaged tiers, respecting manual volume changes.
-     * Tracks the volume baseline (user's desired base) and adds the sum of active boosts.
-     */
-    private fun applyVolumeBoost() {
-        val targetBoost = currentTier1Boost + currentTier2Boost
-        val max = audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
-        val min = audioManager.getStreamMinVolume(AudioManager.STREAM_MUSIC)
-        val current = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC)
+    private fun applyVolumeChanges() {
+        val newTier1Boost = if (tier1Engaged) settings.tier1.volumeIncreaseSteps else 0
+        val newTier2Boost = if (tier2Engaged) settings.tier2.volumeIncreaseSteps else 0
 
-        val expectedVolume = (volumeBaseline + currentTier1Boost + currentTier2Boost).coerceIn(min, max)
+        val tier1Delta = newTier1Boost - currentTier1Boost
+        val tier2Delta = newTier2Boost - currentTier2Boost
 
-        if (current != expectedVolume) {
-            if (current >= min && current <= max) {
-                volumeBaseline = (current - targetBoost).coerceIn(min, max)
-            }
+        if (tier1Delta != 0) {
+            adjustVolume(tier1Delta)
+            DebugLog.d("SpeedVolumeService", "Tier 1 volume delta: $tier1Delta")
+            android.util.Log.d("SpeedVolume", "Volume adjustment: tier1 delta=$tier1Delta")
+            currentTier1Boost = newTier1Boost
         }
 
-        val newTarget = (volumeBaseline + targetBoost).coerceIn(min, max)
-        if (current != newTarget) {
-            audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, newTarget, 0)
-            DebugLog.d("SpeedVolumeService", "Volume changed: $current -> $newTarget (baseline=$volumeBaseline, boost=$targetBoost)")
-            android.util.Log.d("SpeedVolume", "VOLUME: $current -> $newTarget (tier1=$currentTier1Boost + tier2=$currentTier2Boost)")
-        } else if (targetBoost > 0) {
-            DebugLog.d("SpeedVolumeService", "Volume already at target: $current (boost=$targetBoost)")
-            android.util.Log.d("SpeedVolume", "VOLUME STABLE: $current (target was $newTarget)")
+        if (tier2Delta != 0) {
+            adjustVolume(tier2Delta)
+            DebugLog.d("SpeedVolumeService", "Tier 2 volume delta: $tier2Delta")
+            android.util.Log.d("SpeedVolume", "Volume adjustment: tier2 delta=$tier2Delta")
+            currentTier2Boost = newTier2Boost
         }
     }
 
+    private fun adjustVolume(deltaSteps: Int) {
+        if (deltaSteps == 0) return
+        val max = audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
+        val min = audioManager.getStreamMinVolume(AudioManager.STREAM_MUSIC)
+        val current = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC)
+        val target = (current + deltaSteps).coerceIn(min, max)
+        audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, target, 0)
+        DebugLog.d("SpeedVolumeService", "Volume: $current + $deltaSteps = $target")
+        android.util.Log.d("SpeedVolume", "VOLUME CHANGE: $current -> $target (delta=$deltaSteps)")
+    }
+
     private fun revertAllBoosts() {
-        if (tier1Engaged || tier2Engaged) {
+        if (currentTier1Boost > 0) {
+            adjustVolume(-currentTier1Boost)
             currentTier1Boost = 0
+        }
+        if (currentTier2Boost > 0) {
+            adjustVolume(-currentTier2Boost)
             currentTier2Boost = 0
-            applyVolumeBoost()
         }
     }
 
