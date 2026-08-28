@@ -57,3 +57,4 @@ string unit_mph
 string version_default
 string view_logs_button
 style Theme.SpeedVolume
+xml provider_paths

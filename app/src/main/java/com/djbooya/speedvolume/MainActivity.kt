@@ -12,6 +12,7 @@ import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
+import androidx.core.content.FileProvider
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
@@ -249,11 +250,16 @@ class MainActivity : AppCompatActivity() {
         }
 
         DebugLog.d("MainActivity", "Opening log file: ${logFile.absolutePath}")
-        val intent = Intent(Intent.ACTION_VIEW).apply {
-            setDataAndType(Uri.fromFile(logFile), "text/plain")
-        }
-
         try {
+            val fileUri = FileProvider.getUriForFile(
+                this,
+                "com.djbooya.speedvolume.debug.fileprovider",
+                logFile
+            )
+            val intent = Intent(Intent.ACTION_VIEW).apply {
+                setDataAndType(fileUri, "text/plain")
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            }
             startActivity(intent)
         } catch (e: Exception) {
             DebugLog.e("MainActivity", "Failed to open log file", e)

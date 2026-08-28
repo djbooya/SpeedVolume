@@ -1,9 +1,5 @@
 [
     {
-        "merged": "C:\\Users\\booya\\.gradle\\daemon\\8.11.1\\com.djbooya.speedvolume.app-mergeDebugResources-31:\\layout\\activity_main.xml",
-        "source": "C:\\Users\\booya\\.gradle\\daemon\\8.11.1\\com.djbooya.speedvolume.app-main-34:\\layout\\activity_main.xml"
-    },
-    {
         "merged": "com.djbooya.speedvolume.app-mergeDebugResources-31:/layout/activity_main.xml",
         "source": "com.djbooya.speedvolume.app-main-34:/layout/activity_main.xml"
     }

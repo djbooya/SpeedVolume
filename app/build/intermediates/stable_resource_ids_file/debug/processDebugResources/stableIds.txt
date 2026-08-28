@@ -1,3 +1,4 @@
+com.djbooya.speedvolume.debug:xml/provider_paths = 0x7f120000
 com.djbooya.speedvolume.debug:styleable/View = 0x7f11008d
 com.djbooya.speedvolume.debug:styleable/Toolbar = 0x7f110088
 com.djbooya.speedvolume.debug:styleable/TextInputEditText = 0x7f110085
