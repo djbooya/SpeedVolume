@@ -12,6 +12,7 @@ id buttonCancel
 id buttonGrantLocation
 id buttonIgnoreBattery
 id buttonSave
+id buttonViewLogs
 id checkStartOnBoot
 id checkTier1Enabled
 id checkTier2Enabled
@@ -27,6 +28,7 @@ id radioKmh
 id radioMph
 id switchMaster
 id textStatus
+id textVersion
 layout activity_main
 mipmap ic_launcher
 mipmap ic_launcher_round
@@ -52,4 +54,6 @@ string tier_speed_label
 string unit_kmh
 string unit_label
 string unit_mph
+string version_default
+string view_logs_button
 style Theme.SpeedVolume

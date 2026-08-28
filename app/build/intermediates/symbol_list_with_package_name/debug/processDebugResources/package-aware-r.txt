@@ -3059,6 +3059,7 @@ id buttonGrantLocation
 id buttonIgnoreBattery
 id buttonPanel
 id buttonSave
+id buttonViewLogs
 id cancel_button
 id center
 id centerCrop
@@ -3390,6 +3391,7 @@ id textSpacerNoTitle
 id textStart
 id textStatus
 id textTop
+id textVersion
 id text_input_end_icon
 id text_input_error_icon
 id text_input_start_icon
@@ -3815,6 +3817,8 @@ string tier_speed_label
 string unit_kmh
 string unit_label
 string unit_mph
+string version_default
+string view_logs_button
 style AlertDialog_AppCompat
 style AlertDialog_AppCompat_Light
 style Animation_AppCompat_Dialog

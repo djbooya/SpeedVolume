@@ -39,6 +39,9 @@ public final class ActivityMainBinding implements ViewBinding {
   public final Button buttonSave;
 
   @NonNull
+  public final Button buttonViewLogs;
+
+  @NonNull
   public final CheckBox checkStartOnBoot;
 
   @NonNull
@@ -83,21 +86,26 @@ public final class ActivityMainBinding implements ViewBinding {
   @NonNull
   public final TextView textStatus;
 
+  @NonNull
+  public final TextView textVersion;
+
   private ActivityMainBinding(@NonNull ScrollView rootView, @NonNull Button buttonCancel,
       @NonNull Button buttonGrantLocation, @NonNull Button buttonIgnoreBattery,
-      @NonNull Button buttonSave, @NonNull CheckBox checkStartOnBoot,
-      @NonNull CheckBox checkTier1Enabled, @NonNull CheckBox checkTier2Enabled,
-      @NonNull LinearLayout contentContainer, @NonNull EditText editTier1Dwell,
-      @NonNull EditText editTier1Increase, @NonNull EditText editTier1Speed,
-      @NonNull EditText editTier2Dwell, @NonNull EditText editTier2Increase,
-      @NonNull EditText editTier2Speed, @NonNull RadioGroup radioGroupUnit,
-      @NonNull RadioButton radioKmh, @NonNull RadioButton radioMph,
-      @NonNull SwitchMaterial switchMaster, @NonNull TextView textStatus) {
+      @NonNull Button buttonSave, @NonNull Button buttonViewLogs,
+      @NonNull CheckBox checkStartOnBoot, @NonNull CheckBox checkTier1Enabled,
+      @NonNull CheckBox checkTier2Enabled, @NonNull LinearLayout contentContainer,
+      @NonNull EditText editTier1Dwell, @NonNull EditText editTier1Increase,
+      @NonNull EditText editTier1Speed, @NonNull EditText editTier2Dwell,
+      @NonNull EditText editTier2Increase, @NonNull EditText editTier2Speed,
+      @NonNull RadioGroup radioGroupUnit, @NonNull RadioButton radioKmh,
+      @NonNull RadioButton radioMph, @NonNull SwitchMaterial switchMaster,
+      @NonNull TextView textStatus, @NonNull TextView textVersion) {
     this.rootView = rootView;
     this.buttonCancel = buttonCancel;
     this.buttonGrantLocation = buttonGrantLocation;
     this.buttonIgnoreBattery = buttonIgnoreBattery;
     this.buttonSave = buttonSave;
+    this.buttonViewLogs = buttonViewLogs;
     this.checkStartOnBoot = checkStartOnBoot;
     this.checkTier1Enabled = checkTier1Enabled;
     this.checkTier2Enabled = checkTier2Enabled;
@@ -113,6 +121,7 @@ public final class ActivityMainBinding implements ViewBinding {
     this.radioMph = radioMph;
     this.switchMaster = switchMaster;
     this.textStatus = textStatus;
+    this.textVersion = textVersion;
   }
 
   @Override
@@ -163,6 +172,12 @@ public final class ActivityMainBinding implements ViewBinding {
       id = R.id.buttonSave;
       Button buttonSave = ViewBindings.findChildViewById(rootView, id);
       if (buttonSave == null) {
+        break missingId;
+      }
+
+      id = R.id.buttonViewLogs;
+      Button buttonViewLogs = ViewBindings.findChildViewById(rootView, id);
+      if (buttonViewLogs == null) {
         break missingId;
       }
 
@@ -256,11 +271,17 @@ public final class ActivityMainBinding implements ViewBinding {
         break missingId;
       }
 
+      id = R.id.textVersion;
+      TextView textVersion = ViewBindings.findChildViewById(rootView, id);
+      if (textVersion == null) {
+        break missingId;
+      }
+
       return new ActivityMainBinding((ScrollView) rootView, buttonCancel, buttonGrantLocation,
-          buttonIgnoreBattery, buttonSave, checkStartOnBoot, checkTier1Enabled, checkTier2Enabled,
-          contentContainer, editTier1Dwell, editTier1Increase, editTier1Speed, editTier2Dwell,
-          editTier2Increase, editTier2Speed, radioGroupUnit, radioKmh, radioMph, switchMaster,
-          textStatus);
+          buttonIgnoreBattery, buttonSave, buttonViewLogs, checkStartOnBoot, checkTier1Enabled,
+          checkTier2Enabled, contentContainer, editTier1Dwell, editTier1Increase, editTier1Speed,
+          editTier2Dwell, editTier2Increase, editTier2Speed, radioGroupUnit, radioKmh, radioMph,
+          switchMaster, textStatus, textVersion);
     }
     String missingId = rootView.getResources().getResourceName(id);
     throw new NullPointerException("Missing required view with ID: ".concat(missingId));
