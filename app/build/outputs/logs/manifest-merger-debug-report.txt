@@ -1,9 +1,9 @@
 -- Merging decision tree log ---
 manifest
-ADDED from C:\Users\booya\Nextcloud\claude-code\SpeedVolume\app\src\main\AndroidManifest.xml:2:1-70:12
-INJECTED from C:\Users\booya\Nextcloud\claude-code\SpeedVolume\app\src\main\AndroidManifest.xml:2:1-70:12
-INJECTED from C:\Users\booya\Nextcloud\claude-code\SpeedVolume\app\src\main\AndroidManifest.xml:2:1-70:12
-INJECTED from C:\Users\booya\Nextcloud\claude-code\SpeedVolume\app\src\main\AndroidManifest.xml:2:1-70:12
+ADDED from C:\Users\booya\Nextcloud\claude-code\SpeedVolume\app\src\main\AndroidManifest.xml:2:1-78:12
+INJECTED from C:\Users\booya\Nextcloud\claude-code\SpeedVolume\app\src\main\AndroidManifest.xml:2:1-78:12
+INJECTED from C:\Users\booya\Nextcloud\claude-code\SpeedVolume\app\src\main\AndroidManifest.xml:2:1-78:12
+INJECTED from C:\Users\booya\Nextcloud\claude-code\SpeedVolume\app\src\main\AndroidManifest.xml:2:1-78:12
 MERGED from [androidx.databinding:viewbinding:8.10.1] C:\Users\booya\.gradle\caches\8.11.1\transforms\6089108bdea14d5514430d209af99da4\transformed\viewbinding-8.10.1\AndroidManifest.xml:2:1-7:12
 MERGED from [com.google.android.material:material:1.10.0] C:\Users\booya\.gradle\caches\8.11.1\transforms\020abe98376fa3dc6e180d7182f6a7f4\transformed\material-1.10.0\AndroidManifest.xml:17:1-24:12
 MERGED from [androidx.appcompat:appcompat-resources:1.6.1] C:\Users\booya\.gradle\caches\8.11.1\transforms\c610af0a4c811b547e88ab66b8991015\transformed\appcompat-resources-1.6.1\AndroidManifest.xml:17:1-22:12
@@ -94,8 +94,8 @@ ADDED from C:\Users\booya\Nextcloud\claude-code\SpeedVolume\app\src\main\Android
 	android:name
 		ADDED from C:\Users\booya\Nextcloud\claude-code\SpeedVolume\app\src\main\AndroidManifest.xml:15:22-92
 application
-ADDED from C:\Users\booya\Nextcloud\claude-code\SpeedVolume\app\src\main\AndroidManifest.xml:17:5-68:19
-INJECTED from C:\Users\booya\Nextcloud\claude-code\SpeedVolume\app\src\main\AndroidManifest.xml:17:5-68:19
+ADDED from C:\Users\booya\Nextcloud\claude-code\SpeedVolume\app\src\main\AndroidManifest.xml:17:5-76:19
+INJECTED from C:\Users\booya\Nextcloud\claude-code\SpeedVolume\app\src\main\AndroidManifest.xml:17:5-76:19
 MERGED from [com.google.android.material:material:1.10.0] C:\Users\booya\.gradle\caches\8.11.1\transforms\020abe98376fa3dc6e180d7182f6a7f4\transformed\material-1.10.0\AndroidManifest.xml:22:5-20
 MERGED from [com.google.android.material:material:1.10.0] C:\Users\booya\.gradle\caches\8.11.1\transforms\020abe98376fa3dc6e180d7182f6a7f4\transformed\material-1.10.0\AndroidManifest.xml:22:5-20
 MERGED from [androidx.constraintlayout:constraintlayout:2.0.1] C:\Users\booya\.gradle\caches\8.11.1\transforms\887f53e2b076ee0bbe031daafdad0915\transformed\constraintlayout-2.0.1\AndroidManifest.xml:9:5-20
@@ -186,22 +186,34 @@ action#com.djbooya.speedvolume.ACTION_RESTART_SERVICE
 ADDED from C:\Users\booya\Nextcloud\claude-code\SpeedVolume\app\src\main\AndroidManifest.xml:54:17-89
 	android:name
 		ADDED from C:\Users\booya\Nextcloud\claude-code\SpeedVolume\app\src\main\AndroidManifest.xml:54:25-86
-provider#androidx.core.content.FileProvider
-ADDED from C:\Users\booya\Nextcloud\claude-code\SpeedVolume\app\src\main\AndroidManifest.xml:58:9-66:20
-	android:grantUriPermissions
-		ADDED from C:\Users\booya\Nextcloud\claude-code\SpeedVolume\app\src\main\AndroidManifest.xml:62:13-47
-	android:authorities
-		ADDED from C:\Users\booya\Nextcloud\claude-code\SpeedVolume\app\src\main\AndroidManifest.xml:60:13-77
+receiver#com.djbooya.speedvolume.ScreenWakeReceiver
+ADDED from C:\Users\booya\Nextcloud\claude-code\SpeedVolume\app\src\main\AndroidManifest.xml:58:9-64:20
 	android:exported
-		ADDED from C:\Users\booya\Nextcloud\claude-code\SpeedVolume\app\src\main\AndroidManifest.xml:61:13-37
+		ADDED from C:\Users\booya\Nextcloud\claude-code\SpeedVolume\app\src\main\AndroidManifest.xml:60:13-37
 	android:name
-		ADDED from C:\Users\booya\Nextcloud\claude-code\SpeedVolume\app\src\main\AndroidManifest.xml:59:13-62
+		ADDED from C:\Users\booya\Nextcloud\claude-code\SpeedVolume\app\src\main\AndroidManifest.xml:59:13-47
+intent-filter#action:name:android.intent.action.SCREEN_ON
+ADDED from C:\Users\booya\Nextcloud\claude-code\SpeedVolume\app\src\main\AndroidManifest.xml:61:13-63:29
+action#android.intent.action.SCREEN_ON
+ADDED from C:\Users\booya\Nextcloud\claude-code\SpeedVolume\app\src\main\AndroidManifest.xml:62:17-74
+	android:name
+		ADDED from C:\Users\booya\Nextcloud\claude-code\SpeedVolume\app\src\main\AndroidManifest.xml:62:25-71
+provider#androidx.core.content.FileProvider
+ADDED from C:\Users\booya\Nextcloud\claude-code\SpeedVolume\app\src\main\AndroidManifest.xml:66:9-74:20
+	android:grantUriPermissions
+		ADDED from C:\Users\booya\Nextcloud\claude-code\SpeedVolume\app\src\main\AndroidManifest.xml:70:13-47
+	android:authorities
+		ADDED from C:\Users\booya\Nextcloud\claude-code\SpeedVolume\app\src\main\AndroidManifest.xml:68:13-77
+	android:exported
+		ADDED from C:\Users\booya\Nextcloud\claude-code\SpeedVolume\app\src\main\AndroidManifest.xml:69:13-37
+	android:name
+		ADDED from C:\Users\booya\Nextcloud\claude-code\SpeedVolume\app\src\main\AndroidManifest.xml:67:13-62
 meta-data#android.support.FILE_PROVIDER_PATHS
-ADDED from C:\Users\booya\Nextcloud\claude-code\SpeedVolume\app\src\main\AndroidManifest.xml:63:13-65:58
+ADDED from C:\Users\booya\Nextcloud\claude-code\SpeedVolume\app\src\main\AndroidManifest.xml:71:13-73:58
 	android:resource
-		ADDED from C:\Users\booya\Nextcloud\claude-code\SpeedVolume\app\src\main\AndroidManifest.xml:65:17-55
+		ADDED from C:\Users\booya\Nextcloud\claude-code\SpeedVolume\app\src\main\AndroidManifest.xml:73:17-55
 	android:name
-		ADDED from C:\Users\booya\Nextcloud\claude-code\SpeedVolume\app\src\main\AndroidManifest.xml:64:17-67
+		ADDED from C:\Users\booya\Nextcloud\claude-code\SpeedVolume\app\src\main\AndroidManifest.xml:72:17-67
 uses-sdk
 INJECTED from C:\Users\booya\Nextcloud\claude-code\SpeedVolume\app\src\main\AndroidManifest.xml reason: use-sdk injection requested
 INJECTED from C:\Users\booya\Nextcloud\claude-code\SpeedVolume\app\src\main\AndroidManifest.xml

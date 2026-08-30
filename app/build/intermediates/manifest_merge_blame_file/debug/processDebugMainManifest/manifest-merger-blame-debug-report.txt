@@ -52,7 +52,7 @@
 28-->[androidx.core:core:1.10.1] C:\Users\booya\.gradle\caches\8.11.1\transforms\e7ba0d8dd602236fe2a679dab41eace3\transformed\core-1.10.1\AndroidManifest.xml:26:22-94
 29
 30    <application
-30-->C:\Users\booya\Nextcloud\claude-code\SpeedVolume\app\src\main\AndroidManifest.xml:17:5-68:19
+30-->C:\Users\booya\Nextcloud\claude-code\SpeedVolume\app\src\main\AndroidManifest.xml:17:5-76:19
 31        android:allowBackup="true"
 31-->C:\Users\booya\Nextcloud\claude-code\SpeedVolume\app\src\main\AndroidManifest.xml:18:9-35
 32        android:appComponentFactory="androidx.core.app.CoreComponentFactory"
@@ -130,89 +130,102 @@
 69-->C:\Users\booya\Nextcloud\claude-code\SpeedVolume\app\src\main\AndroidManifest.xml:54:25-86
 70            </intent-filter>
 71        </receiver>
-72
-73        <provider
-73-->C:\Users\booya\Nextcloud\claude-code\SpeedVolume\app\src\main\AndroidManifest.xml:58:9-66:20
-74            android:name="androidx.core.content.FileProvider"
-74-->C:\Users\booya\Nextcloud\claude-code\SpeedVolume\app\src\main\AndroidManifest.xml:59:13-62
-75            android:authorities="com.djbooya.speedvolume.debug.fileprovider"
-75-->C:\Users\booya\Nextcloud\claude-code\SpeedVolume\app\src\main\AndroidManifest.xml:60:13-77
-76            android:exported="false"
-76-->C:\Users\booya\Nextcloud\claude-code\SpeedVolume\app\src\main\AndroidManifest.xml:61:13-37
-77            android:grantUriPermissions="true" >
-77-->C:\Users\booya\Nextcloud\claude-code\SpeedVolume\app\src\main\AndroidManifest.xml:62:13-47
-78            <meta-data
-78-->C:\Users\booya\Nextcloud\claude-code\SpeedVolume\app\src\main\AndroidManifest.xml:63:13-65:58
-79                android:name="android.support.FILE_PROVIDER_PATHS"
-79-->C:\Users\booya\Nextcloud\claude-code\SpeedVolume\app\src\main\AndroidManifest.xml:64:17-67
-80                android:resource="@xml/provider_paths" />
-80-->C:\Users\booya\Nextcloud\claude-code\SpeedVolume\app\src\main\AndroidManifest.xml:65:17-55
-81        </provider>
-82        <provider
-82-->[androidx.emoji2:emoji2:1.2.0] C:\Users\booya\.gradle\caches\8.11.1\transforms\97054e25f402561529172c5ad334435e\transformed\emoji2-1.2.0\AndroidManifest.xml:24:9-32:20
-83            android:name="androidx.startup.InitializationProvider"
-83-->[androidx.emoji2:emoji2:1.2.0] C:\Users\booya\.gradle\caches\8.11.1\transforms\97054e25f402561529172c5ad334435e\transformed\emoji2-1.2.0\AndroidManifest.xml:25:13-67
-84            android:authorities="com.djbooya.speedvolume.debug.androidx-startup"
-84-->[androidx.emoji2:emoji2:1.2.0] C:\Users\booya\.gradle\caches\8.11.1\transforms\97054e25f402561529172c5ad334435e\transformed\emoji2-1.2.0\AndroidManifest.xml:26:13-68
-85            android:exported="false" >
-85-->[androidx.emoji2:emoji2:1.2.0] C:\Users\booya\.gradle\caches\8.11.1\transforms\97054e25f402561529172c5ad334435e\transformed\emoji2-1.2.0\AndroidManifest.xml:27:13-37
-86            <meta-data
-86-->[androidx.emoji2:emoji2:1.2.0] C:\Users\booya\.gradle\caches\8.11.1\transforms\97054e25f402561529172c5ad334435e\transformed\emoji2-1.2.0\AndroidManifest.xml:29:13-31:52
-87                android:name="androidx.emoji2.text.EmojiCompatInitializer"
-87-->[androidx.emoji2:emoji2:1.2.0] C:\Users\booya\.gradle\caches\8.11.1\transforms\97054e25f402561529172c5ad334435e\transformed\emoji2-1.2.0\AndroidManifest.xml:30:17-75
-88                android:value="androidx.startup" />
-88-->[androidx.emoji2:emoji2:1.2.0] C:\Users\booya\.gradle\caches\8.11.1\transforms\97054e25f402561529172c5ad334435e\transformed\emoji2-1.2.0\AndroidManifest.xml:31:17-49
-89            <meta-data
-89-->[androidx.lifecycle:lifecycle-process:2.6.1] C:\Users\booya\.gradle\caches\8.11.1\transforms\5f21a0a26772543d89dcd5dfe13317c0\transformed\lifecycle-process-2.6.1\AndroidManifest.xml:29:13-31:52
-90                android:name="androidx.lifecycle.ProcessLifecycleInitializer"
-90-->[androidx.lifecycle:lifecycle-process:2.6.1] C:\Users\booya\.gradle\caches\8.11.1\transforms\5f21a0a26772543d89dcd5dfe13317c0\transformed\lifecycle-process-2.6.1\AndroidManifest.xml:30:17-78
-91                android:value="androidx.startup" />
-91-->[androidx.lifecycle:lifecycle-process:2.6.1] C:\Users\booya\.gradle\caches\8.11.1\transforms\5f21a0a26772543d89dcd5dfe13317c0\transformed\lifecycle-process-2.6.1\AndroidManifest.xml:31:17-49
-92            <meta-data
-92-->[androidx.profileinstaller:profileinstaller:1.3.0] C:\Users\booya\.gradle\caches\8.11.1\transforms\b092902bc51f39bea18c3c01987fe0d0\transformed\profileinstaller-1.3.0\AndroidManifest.xml:29:13-31:52
-93                android:name="androidx.profileinstaller.ProfileInstallerInitializer"
-93-->[androidx.profileinstaller:profileinstaller:1.3.0] C:\Users\booya\.gradle\caches\8.11.1\transforms\b092902bc51f39bea18c3c01987fe0d0\transformed\profileinstaller-1.3.0\AndroidManifest.xml:30:17-85
-94                android:value="androidx.startup" />
-94-->[androidx.profileinstaller:profileinstaller:1.3.0] C:\Users\booya\.gradle\caches\8.11.1\transforms\b092902bc51f39bea18c3c01987fe0d0\transformed\profileinstaller-1.3.0\AndroidManifest.xml:31:17-49
-95        </provider>
-96
-97        <receiver
-97-->[androidx.profileinstaller:profileinstaller:1.3.0] C:\Users\booya\.gradle\caches\8.11.1\transforms\b092902bc51f39bea18c3c01987fe0d0\transformed\profileinstaller-1.3.0\AndroidManifest.xml:34:9-52:20
-98            android:name="androidx.profileinstaller.ProfileInstallReceiver"
-98-->[androidx.profileinstaller:profileinstaller:1.3.0] C:\Users\booya\.gradle\caches\8.11.1\transforms\b092902bc51f39bea18c3c01987fe0d0\transformed\profileinstaller-1.3.0\AndroidManifest.xml:35:13-76
-99            android:directBootAware="false"
-99-->[androidx.profileinstaller:profileinstaller:1.3.0] C:\Users\booya\.gradle\caches\8.11.1\transforms\b092902bc51f39bea18c3c01987fe0d0\transformed\profileinstaller-1.3.0\AndroidManifest.xml:36:13-44
-100            android:enabled="true"
-100-->[androidx.profileinstaller:profileinstaller:1.3.0] C:\Users\booya\.gradle\caches\8.11.1\transforms\b092902bc51f39bea18c3c01987fe0d0\transformed\profileinstaller-1.3.0\AndroidManifest.xml:37:13-35
-101            android:exported="true"
-101-->[androidx.profileinstaller:profileinstaller:1.3.0] C:\Users\booya\.gradle\caches\8.11.1\transforms\b092902bc51f39bea18c3c01987fe0d0\transformed\profileinstaller-1.3.0\AndroidManifest.xml:38:13-36
-102            android:permission="android.permission.DUMP" >
-102-->[androidx.profileinstaller:profileinstaller:1.3.0] C:\Users\booya\.gradle\caches\8.11.1\transforms\b092902bc51f39bea18c3c01987fe0d0\transformed\profileinstaller-1.3.0\AndroidManifest.xml:39:13-57
-103            <intent-filter>
-103-->[androidx.profileinstaller:profileinstaller:1.3.0] C:\Users\booya\.gradle\caches\8.11.1\transforms\b092902bc51f39bea18c3c01987fe0d0\transformed\profileinstaller-1.3.0\AndroidManifest.xml:40:13-42:29
-104                <action android:name="androidx.profileinstaller.action.INSTALL_PROFILE" />
-104-->[androidx.profileinstaller:profileinstaller:1.3.0] C:\Users\booya\.gradle\caches\8.11.1\transforms\b092902bc51f39bea18c3c01987fe0d0\transformed\profileinstaller-1.3.0\AndroidManifest.xml:41:17-91
-104-->[androidx.profileinstaller:profileinstaller:1.3.0] C:\Users\booya\.gradle\caches\8.11.1\transforms\b092902bc51f39bea18c3c01987fe0d0\transformed\profileinstaller-1.3.0\AndroidManifest.xml:41:25-88
-105            </intent-filter>
-106            <intent-filter>
-106-->[androidx.profileinstaller:profileinstaller:1.3.0] C:\Users\booya\.gradle\caches\8.11.1\transforms\b092902bc51f39bea18c3c01987fe0d0\transformed\profileinstaller-1.3.0\AndroidManifest.xml:43:13-45:29
-107                <action android:name="androidx.profileinstaller.action.SKIP_FILE" />
-107-->[androidx.profileinstaller:profileinstaller:1.3.0] C:\Users\booya\.gradle\caches\8.11.1\transforms\b092902bc51f39bea18c3c01987fe0d0\transformed\profileinstaller-1.3.0\AndroidManifest.xml:44:17-85
-107-->[androidx.profileinstaller:profileinstaller:1.3.0] C:\Users\booya\.gradle\caches\8.11.1\transforms\b092902bc51f39bea18c3c01987fe0d0\transformed\profileinstaller-1.3.0\AndroidManifest.xml:44:25-82
-108            </intent-filter>
-109            <intent-filter>
-109-->[androidx.profileinstaller:profileinstaller:1.3.0] C:\Users\booya\.gradle\caches\8.11.1\transforms\b092902bc51f39bea18c3c01987fe0d0\transformed\profileinstaller-1.3.0\AndroidManifest.xml:46:13-48:29
-110                <action android:name="androidx.profileinstaller.action.SAVE_PROFILE" />
-110-->[androidx.profileinstaller:profileinstaller:1.3.0] C:\Users\booya\.gradle\caches\8.11.1\transforms\b092902bc51f39bea18c3c01987fe0d0\transformed\profileinstaller-1.3.0\AndroidManifest.xml:47:17-88
-110-->[androidx.profileinstaller:profileinstaller:1.3.0] C:\Users\booya\.gradle\caches\8.11.1\transforms\b092902bc51f39bea18c3c01987fe0d0\transformed\profileinstaller-1.3.0\AndroidManifest.xml:47:25-85
-111            </intent-filter>
-112            <intent-filter>
-112-->[androidx.profileinstaller:profileinstaller:1.3.0] C:\Users\booya\.gradle\caches\8.11.1\transforms\b092902bc51f39bea18c3c01987fe0d0\transformed\profileinstaller-1.3.0\AndroidManifest.xml:49:13-51:29
-113                <action android:name="androidx.profileinstaller.action.BENCHMARK_OPERATION" />
-113-->[androidx.profileinstaller:profileinstaller:1.3.0] C:\Users\booya\.gradle\caches\8.11.1\transforms\b092902bc51f39bea18c3c01987fe0d0\transformed\profileinstaller-1.3.0\AndroidManifest.xml:50:17-95
-113-->[androidx.profileinstaller:profileinstaller:1.3.0] C:\Users\booya\.gradle\caches\8.11.1\transforms\b092902bc51f39bea18c3c01987fe0d0\transformed\profileinstaller-1.3.0\AndroidManifest.xml:50:25-92
-114            </intent-filter>
-115        </receiver>
-116    </application>
-117
-118</manifest>
+72        <receiver
+72-->C:\Users\booya\Nextcloud\claude-code\SpeedVolume\app\src\main\AndroidManifest.xml:58:9-64:20
+73            android:name="com.djbooya.speedvolume.ScreenWakeReceiver"
+73-->C:\Users\booya\Nextcloud\claude-code\SpeedVolume\app\src\main\AndroidManifest.xml:59:13-47
+74            android:exported="false" >
+74-->C:\Users\booya\Nextcloud\claude-code\SpeedVolume\app\src\main\AndroidManifest.xml:60:13-37
+75            <intent-filter>
+75-->C:\Users\booya\Nextcloud\claude-code\SpeedVolume\app\src\main\AndroidManifest.xml:61:13-63:29
+76                <action android:name="android.intent.action.SCREEN_ON" />
+76-->C:\Users\booya\Nextcloud\claude-code\SpeedVolume\app\src\main\AndroidManifest.xml:62:17-74
+76-->C:\Users\booya\Nextcloud\claude-code\SpeedVolume\app\src\main\AndroidManifest.xml:62:25-71
+77            </intent-filter>
+78        </receiver>
+79
+80        <provider
+80-->C:\Users\booya\Nextcloud\claude-code\SpeedVolume\app\src\main\AndroidManifest.xml:66:9-74:20
+81            android:name="androidx.core.content.FileProvider"
+81-->C:\Users\booya\Nextcloud\claude-code\SpeedVolume\app\src\main\AndroidManifest.xml:67:13-62
+82            android:authorities="com.djbooya.speedvolume.debug.fileprovider"
+82-->C:\Users\booya\Nextcloud\claude-code\SpeedVolume\app\src\main\AndroidManifest.xml:68:13-77
+83            android:exported="false"
+83-->C:\Users\booya\Nextcloud\claude-code\SpeedVolume\app\src\main\AndroidManifest.xml:69:13-37
+84            android:grantUriPermissions="true" >
+84-->C:\Users\booya\Nextcloud\claude-code\SpeedVolume\app\src\main\AndroidManifest.xml:70:13-47
+85            <meta-data
+85-->C:\Users\booya\Nextcloud\claude-code\SpeedVolume\app\src\main\AndroidManifest.xml:71:13-73:58
+86                android:name="android.support.FILE_PROVIDER_PATHS"
+86-->C:\Users\booya\Nextcloud\claude-code\SpeedVolume\app\src\main\AndroidManifest.xml:72:17-67
+87                android:resource="@xml/provider_paths" />
+87-->C:\Users\booya\Nextcloud\claude-code\SpeedVolume\app\src\main\AndroidManifest.xml:73:17-55
+88        </provider>
+89        <provider
+89-->[androidx.emoji2:emoji2:1.2.0] C:\Users\booya\.gradle\caches\8.11.1\transforms\97054e25f402561529172c5ad334435e\transformed\emoji2-1.2.0\AndroidManifest.xml:24:9-32:20
+90            android:name="androidx.startup.InitializationProvider"
+90-->[androidx.emoji2:emoji2:1.2.0] C:\Users\booya\.gradle\caches\8.11.1\transforms\97054e25f402561529172c5ad334435e\transformed\emoji2-1.2.0\AndroidManifest.xml:25:13-67
+91            android:authorities="com.djbooya.speedvolume.debug.androidx-startup"
+91-->[androidx.emoji2:emoji2:1.2.0] C:\Users\booya\.gradle\caches\8.11.1\transforms\97054e25f402561529172c5ad334435e\transformed\emoji2-1.2.0\AndroidManifest.xml:26:13-68
+92            android:exported="false" >
+92-->[androidx.emoji2:emoji2:1.2.0] C:\Users\booya\.gradle\caches\8.11.1\transforms\97054e25f402561529172c5ad334435e\transformed\emoji2-1.2.0\AndroidManifest.xml:27:13-37
+93            <meta-data
+93-->[androidx.emoji2:emoji2:1.2.0] C:\Users\booya\.gradle\caches\8.11.1\transforms\97054e25f402561529172c5ad334435e\transformed\emoji2-1.2.0\AndroidManifest.xml:29:13-31:52
+94                android:name="androidx.emoji2.text.EmojiCompatInitializer"
+94-->[androidx.emoji2:emoji2:1.2.0] C:\Users\booya\.gradle\caches\8.11.1\transforms\97054e25f402561529172c5ad334435e\transformed\emoji2-1.2.0\AndroidManifest.xml:30:17-75
+95                android:value="androidx.startup" />
+95-->[androidx.emoji2:emoji2:1.2.0] C:\Users\booya\.gradle\caches\8.11.1\transforms\97054e25f402561529172c5ad334435e\transformed\emoji2-1.2.0\AndroidManifest.xml:31:17-49
+96            <meta-data
+96-->[androidx.lifecycle:lifecycle-process:2.6.1] C:\Users\booya\.gradle\caches\8.11.1\transforms\5f21a0a26772543d89dcd5dfe13317c0\transformed\lifecycle-process-2.6.1\AndroidManifest.xml:29:13-31:52
+97                android:name="androidx.lifecycle.ProcessLifecycleInitializer"
+97-->[androidx.lifecycle:lifecycle-process:2.6.1] C:\Users\booya\.gradle\caches\8.11.1\transforms\5f21a0a26772543d89dcd5dfe13317c0\transformed\lifecycle-process-2.6.1\AndroidManifest.xml:30:17-78
+98                android:value="androidx.startup" />
+98-->[androidx.lifecycle:lifecycle-process:2.6.1] C:\Users\booya\.gradle\caches\8.11.1\transforms\5f21a0a26772543d89dcd5dfe13317c0\transformed\lifecycle-process-2.6.1\AndroidManifest.xml:31:17-49
+99            <meta-data
+99-->[androidx.profileinstaller:profileinstaller:1.3.0] C:\Users\booya\.gradle\caches\8.11.1\transforms\b092902bc51f39bea18c3c01987fe0d0\transformed\profileinstaller-1.3.0\AndroidManifest.xml:29:13-31:52
+100                android:name="androidx.profileinstaller.ProfileInstallerInitializer"
+100-->[androidx.profileinstaller:profileinstaller:1.3.0] C:\Users\booya\.gradle\caches\8.11.1\transforms\b092902bc51f39bea18c3c01987fe0d0\transformed\profileinstaller-1.3.0\AndroidManifest.xml:30:17-85
+101                android:value="androidx.startup" />
+101-->[androidx.profileinstaller:profileinstaller:1.3.0] C:\Users\booya\.gradle\caches\8.11.1\transforms\b092902bc51f39bea18c3c01987fe0d0\transformed\profileinstaller-1.3.0\AndroidManifest.xml:31:17-49
+102        </provider>
+103
+104        <receiver
+104-->[androidx.profileinstaller:profileinstaller:1.3.0] C:\Users\booya\.gradle\caches\8.11.1\transforms\b092902bc51f39bea18c3c01987fe0d0\transformed\profileinstaller-1.3.0\AndroidManifest.xml:34:9-52:20
+105            android:name="androidx.profileinstaller.ProfileInstallReceiver"
+105-->[androidx.profileinstaller:profileinstaller:1.3.0] C:\Users\booya\.gradle\caches\8.11.1\transforms\b092902bc51f39bea18c3c01987fe0d0\transformed\profileinstaller-1.3.0\AndroidManifest.xml:35:13-76
+106            android:directBootAware="false"
+106-->[androidx.profileinstaller:profileinstaller:1.3.0] C:\Users\booya\.gradle\caches\8.11.1\transforms\b092902bc51f39bea18c3c01987fe0d0\transformed\profileinstaller-1.3.0\AndroidManifest.xml:36:13-44
+107            android:enabled="true"
+107-->[androidx.profileinstaller:profileinstaller:1.3.0] C:\Users\booya\.gradle\caches\8.11.1\transforms\b092902bc51f39bea18c3c01987fe0d0\transformed\profileinstaller-1.3.0\AndroidManifest.xml:37:13-35
+108            android:exported="true"
+108-->[androidx.profileinstaller:profileinstaller:1.3.0] C:\Users\booya\.gradle\caches\8.11.1\transforms\b092902bc51f39bea18c3c01987fe0d0\transformed\profileinstaller-1.3.0\AndroidManifest.xml:38:13-36
+109            android:permission="android.permission.DUMP" >
+109-->[androidx.profileinstaller:profileinstaller:1.3.0] C:\Users\booya\.gradle\caches\8.11.1\transforms\b092902bc51f39bea18c3c01987fe0d0\transformed\profileinstaller-1.3.0\AndroidManifest.xml:39:13-57
+110            <intent-filter>
+110-->[androidx.profileinstaller:profileinstaller:1.3.0] C:\Users\booya\.gradle\caches\8.11.1\transforms\b092902bc51f39bea18c3c01987fe0d0\transformed\profileinstaller-1.3.0\AndroidManifest.xml:40:13-42:29
+111                <action android:name="androidx.profileinstaller.action.INSTALL_PROFILE" />
+111-->[androidx.profileinstaller:profileinstaller:1.3.0] C:\Users\booya\.gradle\caches\8.11.1\transforms\b092902bc51f39bea18c3c01987fe0d0\transformed\profileinstaller-1.3.0\AndroidManifest.xml:41:17-91
+111-->[androidx.profileinstaller:profileinstaller:1.3.0] C:\Users\booya\.gradle\caches\8.11.1\transforms\b092902bc51f39bea18c3c01987fe0d0\transformed\profileinstaller-1.3.0\AndroidManifest.xml:41:25-88
+112            </intent-filter>
+113            <intent-filter>
+113-->[androidx.profileinstaller:profileinstaller:1.3.0] C:\Users\booya\.gradle\caches\8.11.1\transforms\b092902bc51f39bea18c3c01987fe0d0\transformed\profileinstaller-1.3.0\AndroidManifest.xml:43:13-45:29
+114                <action android:name="androidx.profileinstaller.action.SKIP_FILE" />
+114-->[androidx.profileinstaller:profileinstaller:1.3.0] C:\Users\booya\.gradle\caches\8.11.1\transforms\b092902bc51f39bea18c3c01987fe0d0\transformed\profileinstaller-1.3.0\AndroidManifest.xml:44:17-85
+114-->[androidx.profileinstaller:profileinstaller:1.3.0] C:\Users\booya\.gradle\caches\8.11.1\transforms\b092902bc51f39bea18c3c01987fe0d0\transformed\profileinstaller-1.3.0\AndroidManifest.xml:44:25-82
+115            </intent-filter>
+116            <intent-filter>
+116-->[androidx.profileinstaller:profileinstaller:1.3.0] C:\Users\booya\.gradle\caches\8.11.1\transforms\b092902bc51f39bea18c3c01987fe0d0\transformed\profileinstaller-1.3.0\AndroidManifest.xml:46:13-48:29
+117                <action android:name="androidx.profileinstaller.action.SAVE_PROFILE" />
+117-->[androidx.profileinstaller:profileinstaller:1.3.0] C:\Users\booya\.gradle\caches\8.11.1\transforms\b092902bc51f39bea18c3c01987fe0d0\transformed\profileinstaller-1.3.0\AndroidManifest.xml:47:17-88
+117-->[androidx.profileinstaller:profileinstaller:1.3.0] C:\Users\booya\.gradle\caches\8.11.1\transforms\b092902bc51f39bea18c3c01987fe0d0\transformed\profileinstaller-1.3.0\AndroidManifest.xml:47:25-85
+118            </intent-filter>
+119            <intent-filter>
+119-->[androidx.profileinstaller:profileinstaller:1.3.0] C:\Users\booya\.gradle\caches\8.11.1\transforms\b092902bc51f39bea18c3c01987fe0d0\transformed\profileinstaller-1.3.0\AndroidManifest.xml:49:13-51:29
+120                <action android:name="androidx.profileinstaller.action.BENCHMARK_OPERATION" />
+120-->[androidx.profileinstaller:profileinstaller:1.3.0] C:\Users\booya\.gradle\caches\8.11.1\transforms\b092902bc51f39bea18c3c01987fe0d0\transformed\profileinstaller-1.3.0\AndroidManifest.xml:50:17-95
+120-->[androidx.profileinstaller:profileinstaller:1.3.0] C:\Users\booya\.gradle\caches\8.11.1\transforms\b092902bc51f39bea18c3c01987fe0d0\transformed\profileinstaller-1.3.0\AndroidManifest.xml:50:25-92
+121            </intent-filter>
+122        </receiver>
+123    </application>
+124
+125</manifest>

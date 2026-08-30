@@ -69,6 +69,13 @@
                 <action android:name="com.djbooya.speedvolume.ACTION_RESTART_SERVICE" />
             </intent-filter>
         </receiver>
+        <receiver
+            android:name="com.djbooya.speedvolume.ScreenWakeReceiver"
+            android:exported="false" >
+            <intent-filter>
+                <action android:name="android.intent.action.SCREEN_ON" />
+            </intent-filter>
+        </receiver>
 
         <provider
             android:name="androidx.core.content.FileProvider"
