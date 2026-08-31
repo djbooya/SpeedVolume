@@ -57,7 +57,7 @@
 
         <receiver
             android:name=".ScreenWakeReceiver"
-            android:exported="false">
+            android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.SCREEN_ON" />
             </intent-filter>
