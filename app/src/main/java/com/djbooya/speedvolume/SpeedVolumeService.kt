@@ -64,6 +64,15 @@ class SpeedVolumeService : Service() {
         super.onCreate()
         DebugLog.init(this)
         DebugLog.d("SpeedVolumeService", "Service created")
+
+        val defaultUncaughtHandler = Thread.getDefaultUncaughtExceptionHandler()
+        Thread.setDefaultUncaughtExceptionHandler { thread, throwable ->
+            DebugLog.e("SpeedVolumeService", "UNCAUGHT EXCEPTION in thread ${thread.name}: ${throwable.message}")
+            DebugLog.e("SpeedVolumeService", throwable.stackTraceToString())
+            android.util.Log.e("SpeedVolume", "CRASH: ${throwable.message}", throwable)
+            defaultUncaughtHandler?.uncaughtException(thread, throwable)
+        }
+
         locationManager = getSystemService(LOCATION_SERVICE) as LocationManager
         audioManager = getSystemService(AUDIO_SERVICE) as AudioManager
         settingsRepository = SettingsRepository(this)
@@ -101,6 +110,7 @@ class SpeedVolumeService : Service() {
         startLocationUpdates()
         registerScreenReceiver()
         scheduleLocationUpdateCheck()
+        scheduleHeartbeatLog()
         ServiceRestartAlarm.scheduleRestartAlarm(this)
         DebugLog.d("SpeedVolumeService", "Service started successfully")
         android.util.Log.d("SpeedVolume", "Service started - listening for GPS")
@@ -110,7 +120,10 @@ class SpeedVolumeService : Service() {
 
     override fun onDestroy() {
         super.onDestroy()
-        DebugLog.d("SpeedVolumeService", "Service destroyed")
+        DebugLog.d("SpeedVolumeService", "=== SERVICE DESTROYED ===")
+        DebugLog.d("SpeedVolumeService", "Process being terminated - service lifecycle ending")
+        android.util.Log.d("SpeedVolume", "=== SERVICE onDestroy called ===")
+
         handler.removeCallbacksAndMessages(null)
         ScreenReceiver.clearService()
         ServiceRestartAlarm.cancelRestartAlarm(this)
@@ -127,6 +140,24 @@ class SpeedVolumeService : Service() {
         }
         revertAllBoosts()
         ServiceStatus.update { it.copy(running = false, tier1Engaged = false, tier2Engaged = false) }
+    }
+
+    override fun onTrimMemory(level: Int) {
+        super.onTrimMemory(level)
+        val levelName = when (level) {
+            android.content.ComponentCallbacks2.TRIM_MEMORY_RUNNING_CRITICAL -> "CRITICAL"
+            android.content.ComponentCallbacks2.TRIM_MEMORY_RUNNING_LOW -> "LOW"
+            android.content.ComponentCallbacks2.TRIM_MEMORY_RUNNING_MODERATE -> "MODERATE"
+            else -> "UNKNOWN($level)"
+        }
+        DebugLog.d("SpeedVolumeService", "Memory pressure detected: TRIM_MEMORY_$levelName")
+        android.util.Log.w("SpeedVolume", "MEMORY PRESSURE: $levelName")
+    }
+
+    override fun onLowMemory() {
+        super.onLowMemory()
+        DebugLog.d("SpeedVolumeService", "CRITICAL: onLowMemory() called - system may kill service")
+        android.util.Log.e("SpeedVolume", "CRITICAL LOW MEMORY - Service may be terminated")
     }
 
     override fun onBind(intent: Intent?) = null
@@ -187,6 +218,14 @@ class SpeedVolumeService : Service() {
             }
             scheduleLocationUpdateCheck()
         }, LOCATION_UPDATE_RESTART_MS)
+    }
+
+    private fun scheduleHeartbeatLog() {
+        handler.postDelayed({
+            DebugLog.d("SpeedVolumeService", "HEARTBEAT: Service alive, tier1=${tier1Engaged}, tier2=${tier2Engaged}")
+            android.util.Log.d("SpeedVolume", "HEARTBEAT: Service process alive")
+            scheduleHeartbeatLog()
+        }, HEARTBEAT_LOG_MS)
     }
 
     fun onScreenOn() {
@@ -360,5 +399,6 @@ class SpeedVolumeService : Service() {
         private const val NOTIFICATION_ID = 1001
         private const val MIN_UPDATE_MS = 1000L
         private const val LOCATION_UPDATE_RESTART_MS = 60000L
+        private const val HEARTBEAT_LOG_MS = 120000L
     }
 }

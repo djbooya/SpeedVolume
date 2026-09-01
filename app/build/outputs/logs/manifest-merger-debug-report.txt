@@ -189,7 +189,7 @@ ADDED from C:\Users\booya\Nextcloud\claude-code\SpeedVolume\app\src\main\Android
 receiver#com.djbooya.speedvolume.ScreenWakeReceiver
 ADDED from C:\Users\booya\Nextcloud\claude-code\SpeedVolume\app\src\main\AndroidManifest.xml:58:9-64:20
 	android:exported
-		ADDED from C:\Users\booya\Nextcloud\claude-code\SpeedVolume\app\src\main\AndroidManifest.xml:60:13-37
+		ADDED from C:\Users\booya\Nextcloud\claude-code\SpeedVolume\app\src\main\AndroidManifest.xml:60:13-36
 	android:name
 		ADDED from C:\Users\booya\Nextcloud\claude-code\SpeedVolume\app\src\main\AndroidManifest.xml:59:13-47
 intent-filter#action:name:android.intent.action.SCREEN_ON
