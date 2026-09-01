@@ -54,8 +54,20 @@ class MainActivity : AppCompatActivity() {
         applyStatusBarInsetPadding()
         DebugLog.d("MainActivity", "=== APP OPENED v1.5 ===")
         android.util.Log.d("SpeedVolume", "=== APP OPENED v1.5 ===")
-        populateFromSettings(settingsRepository.load())
+
+        val settings = settingsRepository.load()
+        populateFromSettings(settings)
         updateVersionDisplay()
+
+        // Auto-restart service if enabled but not running
+        if (settings.masterEnabled && !ServiceStatus.state.value.running) {
+            if (hasLocationPermission()) {
+                DebugLog.d("MainActivity", "Service auto-restart: Detected stopped service, restarting")
+                android.util.Log.d("SpeedVolume", "APP OPEN: Auto-restarting stopped service")
+                startServiceCompat()
+                Toast.makeText(this, "Service auto-restarted", Toast.LENGTH_SHORT).show()
+            }
+        }
 
         binding.buttonViewLogs.setOnClickListener { viewLogs() }
 
