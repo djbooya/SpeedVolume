@@ -78,8 +78,8 @@ class SpeedVolumeService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        DebugLog.d("SpeedVolumeService", "=== SERVICE STARTED v1.8 ===")
-        android.util.Log.d("SpeedVolume", "=== SERVICE STARTED v1.8 ===")
+        DebugLog.d("SpeedVolumeService", "=== SERVICE STARTED v1.9 ===")
+        android.util.Log.d("SpeedVolume", "=== SERVICE STARTED v1.9 ===")
         DebugLog.d("SpeedVolumeService", "onStartCommand called")
         android.util.Log.d("SpeedVolume", "onStartCommand called")
         settings = settingsRepository.load()
@@ -88,6 +88,17 @@ class SpeedVolumeService : Service() {
         DebugLog.d("SpeedVolumeService", "CONFIG: Tier1 enabled=${settings.tier1.enabled}, threshold=${settings.tier1.speedThreshold}${settings.speedUnit.name}, boost=+${settings.tier1.volumeIncreaseSteps}steps, dwell=${settings.tier1.dwellSeconds}s")
         DebugLog.d("SpeedVolumeService", "CONFIG: Tier2 enabled=${settings.tier2.enabled}, threshold=${settings.tier2.speedThreshold}${settings.speedUnit.name}, boost=+${settings.tier2.volumeIncreaseSteps}steps, dwell=${settings.tier2.dwellSeconds}s")
         android.util.Log.d("SpeedVolume", "CONFIG: T1=${settings.tier1.speedThreshold}@${settings.tier1.dwellSeconds}s+${settings.tier1.volumeIncreaseSteps}, T2=${settings.tier2.speedThreshold}@${settings.tier2.dwellSeconds}s+${settings.tier2.volumeIncreaseSteps}")
+
+        // The service is exported so Automate can restart it, which means a start can
+        // arrive at any time - including after the user has switched the app off. Honour
+        // the master switch rather than trusting whoever started us.
+        if (!settings.masterEnabled) {
+            DebugLog.d("SpeedVolumeService", "Master switch is off - stopping service")
+            android.util.Log.d("SpeedVolume", "Master switch off - refusing start")
+            ServiceStatus.update { it.copy(running = false) }
+            stopSelf()
+            return START_NOT_STICKY
+        }
 
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
             != PackageManager.PERMISSION_GRANTED
@@ -128,7 +139,18 @@ class SpeedVolumeService : Service() {
         android.util.Log.d("SpeedVolume", "=== SERVICE onDestroy called ===")
 
         handler.removeCallbacksAndMessages(null)
-        ServiceRestartAlarm.cancelRestartAlarm(this)
+
+        // Only tear down the restart alarm when the user actually switched the service
+        // off. If the system stopped us, that alarm is the way back - cancelling it here
+        // (as this used to do unconditionally) threw away our own recovery path, and
+        // onTaskRemoved's quick-restart alarm was cancelled milliseconds after being
+        // armed, since onTaskRemoved runs immediately before onDestroy.
+        if (settingsRepository.load().masterEnabled) {
+            DebugLog.d("SpeedVolumeService", "Still enabled - leaving restart alarm armed")
+        } else {
+            ServiceRestartAlarm.cancelRestartAlarm(this)
+        }
+
         releaseWakeLock()
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
             == PackageManager.PERMISSION_GRANTED

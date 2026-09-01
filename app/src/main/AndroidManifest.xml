@@ -34,9 +34,16 @@
             </intent-filter>
         </activity>
 
+        <!--
+            Exported so an external watchdog (LlamaLab Automate) can restart the service
+            after this head unit force-stops the package on sleep. A force-stopped package
+            has its alarms wiped and its manifest receivers blocked, so it cannot revive
+            itself - only an explicit component start from another app clears that state.
+            See "Running under Automate" in README.md.
+        -->
         <service
             android:name=".SpeedVolumeService"
-            android:exported="false"
+            android:exported="true"
             android:foregroundServiceType="location" />
 
         <receiver

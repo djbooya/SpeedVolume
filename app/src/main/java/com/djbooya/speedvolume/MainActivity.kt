@@ -53,8 +53,8 @@ class MainActivity : AppCompatActivity() {
         DebugLog.d("MainActivity", "App opened")
 
         applyStatusBarInsetPadding()
-        DebugLog.d("MainActivity", "=== APP OPENED v1.8 ===")
-        android.util.Log.d("SpeedVolume", "=== APP OPENED v1.8 ===")
+        DebugLog.d("MainActivity", "=== APP OPENED v1.9 ===")
+        android.util.Log.d("SpeedVolume", "=== APP OPENED v1.9 ===")
 
         val settings = settingsRepository.load()
         populateFromSettings(settings)
@@ -260,7 +260,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun updateVersionDisplay() {
-        binding.textVersion.text = "Version: 1.8"
+        binding.textVersion.text = "Version: 1.9"
     }
 
     private fun viewLogs() {

@@ -22,6 +22,7 @@ A lightweight Android foreground service for car head units that dynamically adj
 6. Tap "Allow exact alarms" so the auto-resume mechanism can fire reliably (Android 12+)
 7. Configure your speed thresholds and volume deltas
 8. Tap **Save** to apply and start the service
+9. If your unit force-stops apps on sleep, set up the Automate watchdog — see [Running under Automate](#running-under-automate)
 
 **Cancel** discards any changes made since launch.
 
@@ -66,6 +67,110 @@ If checked, the service restarts automatically after a radio reboot (requires lo
 - `RECEIVE_BOOT_COMPLETED` — auto-start after radio reboot
 - `REQUEST_IGNORE_BATTERY_OPTIMIZATIONS` — preserve service across battery optimization
 
+## Running under Automate
+
+**Required on head units that force-stop apps on sleep.** If the service stops every time
+the radio sleeps and only comes back when you open the app by hand, this section is for you.
+
+### Why this is necessary
+
+Some head units don't just kill background apps on sleep — they **force-stop** the package.
+Android treats a force-stopped package very differently from a killed one:
+
+- All its pending `AlarmManager` alarms are **deleted**
+- All its manifest-declared broadcast receivers are **blocked** (`BOOT_COMPLETED`,
+  `SCREEN_ON`, `CONNECTIVITY_CHANGE`, etc. are never delivered)
+- It stays in that state until **a user or another app explicitly launches it**
+
+This is by design and it is not something an app can work around from the inside. SpeedVolume
+has five independent self-restart mechanisms and on a force-stopping unit **none of them can
+fire** — verified across a 2,881-line log where every single recovery was a manual app open.
+
+The fix is an external watchdog. [LlamaLab Automate](https://llamalab.com/automate) is a free
+automation app that survives on these units, and an explicit service start from Automate
+clears the stopped state and brings SpeedVolume back.
+
+### Verifying your unit force-stops the app
+
+With ADB enabled on the radio, let it sleep until the service dies, then — **before** opening
+the app — run:
+
+```bash
+adb shell dumpsys package com.djbooya.speedvolume.debug | grep -i stopped
+```
+
+`stopped=true` confirms it. (For a release build, drop the `.debug` suffix.)
+
+### Setup
+
+**1. Install Automate** from Google Play or its APK, and open it once.
+
+**2. Exempt Automate from battery optimization** — System Settings → Apps → Automate →
+Battery → allow background/unrestricted. Automate's own
+[FAQ](https://llamalab.com/automate/doc/faq.html) lists the exact path for many OEM skins.
+
+**3. Create a new flow** (＋ in Automate) with these four blocks:
+
+```
+   ┌─────────────────────────────┐
+   │ Flow beginning              │
+   └──────────────┬──────────────┘
+                  ↓
+   ┌─────────────────────────────┐
+   │ Service start               │   ← restarts SpeedVolume
+   │   Package:  com.djbooya.speedvolume.debug
+   │   Class:    com.djbooya.speedvolume.SpeedVolumeService
+   │   Foreground: Yes
+   └──────────────┬──────────────┘
+                  ↓
+   ┌─────────────────────────────┐
+   │ Delay                       │
+   │   5 minutes                 │
+   └──────────────┬──────────────┘
+                  ↓
+          (loop back to Service start)
+```
+
+**4. Start the flow** and enable **Run on system startup** in Automate's settings
+(≡ menu → Settings) so the watchdog itself returns after a reboot.
+
+### Block settings in detail
+
+**Service start** — the important one. Fill in exactly:
+
+| Field | Value |
+|---|---|
+| Package | `com.djbooya.speedvolume.debug` |
+| Class | `com.djbooya.speedvolume.SpeedVolumeService` |
+| Foreground | **Yes** |
+
+> ⚠️ **The package and class names do not match.** The debug build appends `.debug` to the
+> *application ID* only — the Java class name never changes. Using
+> `com.djbooya.speedvolume.debug.SpeedVolumeService` will fail with a class-not-found error.
+> For a release build the package is `com.djbooya.speedvolume` and the class is unchanged.
+
+> ⚠️ **Foreground must be Yes.** SpeedVolume is a foreground service; starting it with
+> Foreground = No calls `startService()`, which throws `IllegalStateException` when the app
+> is in the background on Android 8+.
+
+**Delay** — 5 minutes is a good default. Starting an already-running service is harmless
+(it just re-runs `onStartCommand`, which is idempotent), so a shorter interval only costs
+a little CPU. This is the fallback that guarantees recovery regardless of what events your
+unit emits.
+
+### Faster recovery on wake (optional)
+
+The 5-minute loop means up to 5 minutes of no volume control after waking. To recover
+within seconds, insert a **Display on** block set to **When changed → On** immediately
+before `Service start`, and run it as a second flow alongside the timed one. Keep the timed
+loop as well — some units never emit display events at all.
+
+### Confirming it works
+
+After a sleep/wake cycle, open the log (View Logs) and look for a `=== SERVICE STARTED ===`
+line that is **not** preceded by `=== APP OPENED ===`. That is Automate restarting the
+service rather than you doing it by hand.
+
 ## Debug Logs
 
 The app writes detailed debug logs to help troubleshoot boot and runtime issues.
@@ -89,6 +194,13 @@ The app writes detailed debug logs to help troubleshoot boot and runtime issues.
 4. Look for ERROR/WARN messages to diagnose issues
 
 ## Release Notes
+
+### v1.9 (Sep 1, 2026)
+- **Root cause found:** Log analysis proved the head unit **force-stops** the package on sleep, not merely kills it. A force-stop deletes all pending alarms and blocks all manifest receivers, so none of the five self-restart mechanisms (boot/screen-wake/connectivity/package-update receivers, restart alarm) can ever fire. The decisive evidence: an exact alarm armed 2.7s before death, with battery optimization already exempted, silently vanished — and across 2,881 log lines `SCREEN_ON`, `CONNECTIVITY_CHANGE`, `MY_PACKAGE_REPLACED` and `BootReceiver` fired **zero** times, while every single recovery was a manual app open. This is unrecoverable from inside the app by design
+- **Changed:** `SpeedVolumeService` is now `exported="true"` so an external watchdog can restart it — an explicit component start from another app is the only thing that clears the force-stopped state. See [Running under Automate](#running-under-automate) for setup
+- **Fixed:** `onDestroy()` cancelled the restart alarm unconditionally, throwing away the app's own recovery path whenever the system stopped the service. It also meant `onTaskRemoved()`'s 5-second quick-restart alarm was cancelled milliseconds after being armed, since `onTaskRemoved` runs immediately before `onDestroy`. The alarm is now only cancelled when the user has actually switched the service off
+- **Fixed:** `onStartCommand` logged the master switch but never honoured it, so a stale or external start would run the service even with the app switched off. It now stops immediately — important now that the service is externally startable
+- **Download:** [SpeedVolume-1.9-debug.apk](https://github.com/djbooya/SpeedVolume/raw/main/app/build/outputs/apk/debug/SpeedVolume-1.9-debug.apk)
 
 ### v1.8 (Sep 1, 2026)
 - **Added:** A partial CPU wake lock (`WAKE_LOCK` permission), held for the entire time the service runs and released in `onDestroy()`. Adopted after researching LlamaLab's Automate app (llamalab.com/automate), whose "Device keep awake" block uses the same technique - instead of *recovering* after Doze suspends the process, this *prevents* Doze from ever suspending it while the service is alive. The head unit is on constant power, so the usual phone-battery tradeoff doesn't apply
@@ -143,9 +255,9 @@ The app writes detailed debug logs to help troubleshoot boot and runtime issues.
 - Some radio ROMs have aggressive auto-start managers — whitelist Speed Volume in any such app
 
 **Service stops after radio sleeps**
-- v1.1+ automatically re-enables location tracking when the device wakes
-- v1.6+ uses an exact restart alarm (5-minute check interval) plus an `onTaskRemoved()` handler as backup — make sure "Allow exact alarms" and "Disable battery optimization" are both granted
-- If still having issues, check your head unit's manufacturer-specific "auto-start"/"protected apps" manager — many aftermarket ROMs kill background apps outside of standard Android battery optimization, which the app cannot override from code
+- Make sure "Allow exact alarms" and "Disable battery optimization" are both granted
+- Check your head unit's manufacturer-specific "auto-start"/"protected apps" manager, if it has one — many aftermarket ROMs kill background apps outside standard Android battery optimization
+- **If the service only ever comes back when you open the app by hand,** your unit is force-stopping the package. No in-app mechanism can recover from that — see [Running under Automate](#running-under-automate) for the external-watchdog fix, and for the ADB command that confirms the diagnosis
 
 **Volume boost not applying**
 - Ensure the service is actually running (check persistent notification)
@@ -164,7 +276,7 @@ export JAVA_HOME="/path/to/Android/Studio/jbr"
 ./gradlew assembleDebug
 ```
 
-Output APK: `app/build/outputs/apk/debug/SpeedVolume-1.8-debug.apk`
+Output APK: `app/build/outputs/apk/debug/SpeedVolume-1.9-debug.apk`
 
 For a release build:
 ```bash
