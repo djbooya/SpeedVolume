@@ -1,6 +1,7 @@
 package com.djbooya.speedvolume
 
 import android.Manifest
+import android.app.AlarmManager
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
@@ -52,8 +53,8 @@ class MainActivity : AppCompatActivity() {
         DebugLog.d("MainActivity", "App opened")
 
         applyStatusBarInsetPadding()
-        DebugLog.d("MainActivity", "=== APP OPENED v1.5 ===")
-        android.util.Log.d("SpeedVolume", "=== APP OPENED v1.5 ===")
+        DebugLog.d("MainActivity", "=== APP OPENED v1.6 ===")
+        android.util.Log.d("SpeedVolume", "=== APP OPENED v1.6 ===")
 
         val settings = settingsRepository.load()
         populateFromSettings(settings)
@@ -91,6 +92,8 @@ class MainActivity : AppCompatActivity() {
         }
 
         binding.buttonIgnoreBattery.setOnClickListener { requestIgnoreBatteryOptimizations() }
+
+        binding.buttonGrantExactAlarm.setOnClickListener { requestExactAlarmPermission() }
 
         binding.buttonSave.setOnClickListener {
             DebugLog.d("MainActivity", "Save button pressed")
@@ -243,8 +246,21 @@ class MainActivity : AppCompatActivity() {
         startActivity(intent)
     }
 
+    private fun requestExactAlarmPermission() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
+            Toast.makeText(this, "Exact alarms already allowed on this Android version.", Toast.LENGTH_SHORT).show()
+            return
+        }
+        val alarmManager = getSystemService(ALARM_SERVICE) as AlarmManager
+        if (alarmManager.canScheduleExactAlarms()) {
+            Toast.makeText(this, "Exact alarms already allowed.", Toast.LENGTH_SHORT).show()
+            return
+        }
+        startActivity(Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM))
+    }
+
     private fun updateVersionDisplay() {
-        binding.textVersion.text = "Version: 1.5"
+        binding.textVersion.text = "Version: 1.6"
     }
 
     private fun viewLogs() {

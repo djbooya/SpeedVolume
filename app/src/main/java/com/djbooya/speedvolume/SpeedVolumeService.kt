@@ -18,6 +18,7 @@ import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.os.PowerManager
 import android.os.SystemClock
 import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationCompat
@@ -79,8 +80,8 @@ class SpeedVolumeService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        DebugLog.d("SpeedVolumeService", "=== SERVICE STARTED v1.5 ===")
-        android.util.Log.d("SpeedVolume", "=== SERVICE STARTED v1.5 ===")
+        DebugLog.d("SpeedVolumeService", "=== SERVICE STARTED v1.6 ===")
+        android.util.Log.d("SpeedVolume", "=== SERVICE STARTED v1.6 ===")
         DebugLog.d("SpeedVolumeService", "onStartCommand called")
         android.util.Log.d("SpeedVolume", "onStartCommand called")
         settings = settingsRepository.load()
@@ -102,6 +103,10 @@ class SpeedVolumeService : Service() {
 
         DebugLog.d("SpeedVolumeService", "Location permission granted - starting service")
         android.util.Log.d("SpeedVolume", "Location permission granted")
+        val powerManager = getSystemService(POWER_SERVICE) as PowerManager
+        val batteryUnrestricted = powerManager.isIgnoringBatteryOptimizations(packageName)
+        val exactAlarmAllowed = ServiceRestartAlarm.canScheduleExact(this)
+        DebugLog.d("SpeedVolumeService", "Battery optimization ignored=$batteryUnrestricted, exact alarms allowed=$exactAlarmAllowed")
         startForeground(NOTIFICATION_ID, buildNotification(null))
         ServiceStatus.update {
             it.copy(running = true, speedUnit = settings.speedUnit, hasFix = false)
@@ -158,6 +163,20 @@ class SpeedVolumeService : Service() {
         super.onLowMemory()
         DebugLog.d("SpeedVolumeService", "CRITICAL: onLowMemory() called - system may kill service")
         android.util.Log.e("SpeedVolume", "CRITICAL LOW MEMORY - Service may be terminated")
+    }
+
+    /**
+     * Some head units clear the "recent tasks" list on their own (or the user swipes the
+     * app away), and many OEM skins kill the whole process right after this callback
+     * returns - restarting the service inline here often gets killed along with it.
+     * Instead, arm a short exact alarm so the OS restarts us a few seconds later, once
+     * this process is already gone.
+     */
+    override fun onTaskRemoved(rootIntent: Intent?) {
+        super.onTaskRemoved(rootIntent)
+        DebugLog.d("SpeedVolumeService", "=== onTaskRemoved: task cleared, arming quick-restart alarm ===")
+        android.util.Log.d("SpeedVolume", "=== TASK REMOVED ===")
+        ServiceRestartAlarm.scheduleRestartAlarm(this, delayMs = 5000L)
     }
 
     override fun onBind(intent: Intent?) = null

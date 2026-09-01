@@ -19,8 +19,9 @@ A lightweight Android foreground service for car head units that dynamically adj
 3. On the radio, enable "install unknown apps" for your file manager and open the APK
 4. Grant location permission
 5. Tap "Disable battery optimization" to ensure the service stays alive
-6. Configure your speed thresholds and volume deltas
-7. Tap **Save** to apply and start the service
+6. Tap "Allow exact alarms" so the auto-resume mechanism can fire reliably (Android 12+)
+7. Configure your speed thresholds and volume deltas
+8. Tap **Save** to apply and start the service
 
 **Cancel** discards any changes made since launch.
 
@@ -89,6 +90,16 @@ The app writes detailed debug logs to help troubleshoot boot and runtime issues.
 
 ## Release Notes
 
+### v1.6 (Aug 31, 2026)
+- **Fixed:** Service resume from sleep — logs showed the 30-minute restart alarm, screen-wake receiver, connectivity-change receiver, and package-update receiver never actually fired even once across a 4.5-hour trace; only manually reopening the app recovered the service
+- **Changed:** Restart alarm now uses `setExactAndAllowWhileIdle` (when the exact-alarm permission is granted) instead of the inexact `setAndAllowWhileIdle`, which OEM battery management can defer indefinitely
+- **Changed:** Restart-check interval shortened from 30 minutes to 5 minutes so a killed service recovers much faster
+- **Added:** `onTaskRemoved()` handling — if the head unit clears recent tasks (or the app is swiped away), a short exact alarm restarts the service a few seconds later, since restarting inline in that callback often gets killed along with the process
+- **Added:** "Allow exact alarms" permission button (Android 12+) — required for the restart alarm to fire reliably
+- **Added:** Battery-optimization and exact-alarm status now logged at service startup for future diagnosis
+- **Note:** If the service still doesn't resume, check your head unit's manufacturer-specific "auto-start"/"protected apps"/background app manager — many aftermarket ROMs maintain a separate kill-list outside standard Android battery optimization that the app can't override from code
+- **Download:** [SpeedVolume-1.6-debug.apk](https://github.com/djbooya/SpeedVolume/raw/main/app/build/outputs/apk/debug/SpeedVolume-1.6-debug.apk)
+
 ### v1.5 (Aug 28, 2026)
 - **Fixed:** View Logs button now visible and full-width on main screen
 - **Fixed:** Version number now large and centered for easy visibility
@@ -124,7 +135,8 @@ The app writes detailed debug logs to help troubleshoot boot and runtime issues.
 
 **Service stops after radio sleeps**
 - v1.1+ automatically re-enables location tracking when the device wakes
-- If still having issues, check battery optimization settings and ensure the app is whitelisted
+- v1.6+ uses an exact restart alarm (5-minute check interval) plus an `onTaskRemoved()` handler as backup — make sure "Allow exact alarms" and "Disable battery optimization" are both granted
+- If still having issues, check your head unit's manufacturer-specific "auto-start"/"protected apps" manager — many aftermarket ROMs kill background apps outside of standard Android battery optimization, which the app cannot override from code
 
 **Volume boost not applying**
 - Ensure the service is actually running (check persistent notification)
@@ -143,7 +155,7 @@ export JAVA_HOME="/path/to/Android/Studio/jbr"
 ./gradlew assembleDebug
 ```
 
-Output APK: `app/build/outputs/apk/debug/SpeedVolume-1.5-debug.apk`
+Output APK: `app/build/outputs/apk/debug/SpeedVolume-1.6-debug.apk`
 
 For a release build:
 ```bash
