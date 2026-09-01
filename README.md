@@ -90,6 +90,10 @@ The app writes detailed debug logs to help troubleshoot boot and runtime issues.
 
 ## Release Notes
 
+### v1.7 (Aug 31, 2026)
+- **Added:** `goAsync()` in `BootReceiver`, `ScreenWakeReceiver`, `ConnectivityChangeReceiver`, and `PackageUpdateReceiver` — extends each receiver's execution window past `onReceive()` returning (up to ~10s), giving a cold-started process more headroom to finish calling `startForegroundService()` before the system can reap it. Adopted after decompiling an aftermarket head-unit dashboard app's manifest/bytecode to see how it survives sleep - it turned out to be a privileged system-signed launcher app (`android.uid.system`, not comparable to a sideloaded third-party service), but its `BroadcastReceiver` pattern of pairing `goAsync()` with a `Handler` was a legitimate, transferable technique
+- **Download:** [SpeedVolume-1.7-debug.apk](https://github.com/djbooya/SpeedVolume/raw/main/app/build/outputs/apk/debug/SpeedVolume-1.7-debug.apk)
+
 ### v1.6 (Aug 31, 2026)
 - **Fixed:** Service resume from sleep — logs showed the 30-minute restart alarm, screen-wake receiver, connectivity-change receiver, and package-update receiver never actually fired even once across a 4.5-hour trace; only manually reopening the app recovered the service
 - **Changed:** Restart alarm now uses `setExactAndAllowWhileIdle` (when the exact-alarm permission is granted) instead of the inexact `setAndAllowWhileIdle`, which OEM battery management can defer indefinitely
@@ -155,7 +159,7 @@ export JAVA_HOME="/path/to/Android/Studio/jbr"
 ./gradlew assembleDebug
 ```
 
-Output APK: `app/build/outputs/apk/debug/SpeedVolume-1.6-debug.apk`
+Output APK: `app/build/outputs/apk/debug/SpeedVolume-1.7-debug.apk`
 
 For a release build:
 ```bash

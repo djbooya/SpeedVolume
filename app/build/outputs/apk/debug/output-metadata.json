@@ -11,9 +11,9 @@
       "type": "SINGLE",
       "filters": [],
       "attributes": [],
-      "versionCode": 7,
-      "versionName": "1.6",
-      "outputFile": "SpeedVolume-1.6-debug.apk"
+      "versionCode": 8,
+      "versionName": "1.7",
+      "outputFile": "SpeedVolume-1.7-debug.apk"
     }
   ],
   "elementType": "File",
