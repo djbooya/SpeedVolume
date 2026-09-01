@@ -90,6 +90,11 @@ The app writes detailed debug logs to help troubleshoot boot and runtime issues.
 
 ## Release Notes
 
+### v1.8 (Sep 1, 2026)
+- **Added:** A partial CPU wake lock (`WAKE_LOCK` permission), held for the entire time the service runs and released in `onDestroy()`. Adopted after researching LlamaLab's Automate app (llamalab.com/automate), whose "Device keep awake" block uses the same technique - instead of *recovering* after Doze suspends the process, this *prevents* Doze from ever suspending it while the service is alive. The head unit is on constant power, so the usual phone-battery tradeoff doesn't apply
+- **Removed:** The dynamic in-process `ScreenReceiver` (and its `onScreenOn()` hook in `SpeedVolumeService`) - it existed to re-request GPS updates after the CPU went to sleep and woke back up, which the wake lock now prevents from happening in the first place. Its job is also covered as a fallback by the existing 60-second periodic location-update check. The manifest-registered `ScreenWakeReceiver` (which restarts the whole service, not just GPS updates, and survives process death) is unaffected and still active
+- **Download:** [SpeedVolume-1.8-debug.apk](https://github.com/djbooya/SpeedVolume/raw/main/app/build/outputs/apk/debug/SpeedVolume-1.8-debug.apk)
+
 ### v1.7 (Aug 31, 2026)
 - **Added:** `goAsync()` in `BootReceiver`, `ScreenWakeReceiver`, `ConnectivityChangeReceiver`, and `PackageUpdateReceiver` — extends each receiver's execution window past `onReceive()` returning (up to ~10s), giving a cold-started process more headroom to finish calling `startForegroundService()` before the system can reap it. Adopted after decompiling an aftermarket head-unit dashboard app's manifest/bytecode to see how it survives sleep - it turned out to be a privileged system-signed launcher app (`android.uid.system`, not comparable to a sideloaded third-party service), but its `BroadcastReceiver` pattern of pairing `goAsync()` with a `Handler` was a legitimate, transferable technique
 - **Download:** [SpeedVolume-1.7-debug.apk](https://github.com/djbooya/SpeedVolume/raw/main/app/build/outputs/apk/debug/SpeedVolume-1.7-debug.apk)
@@ -159,7 +164,7 @@ export JAVA_HOME="/path/to/Android/Studio/jbr"
 ./gradlew assembleDebug
 ```
 
-Output APK: `app/build/outputs/apk/debug/SpeedVolume-1.7-debug.apk`
+Output APK: `app/build/outputs/apk/debug/SpeedVolume-1.8-debug.apk`
 
 For a release build:
 ```bash

@@ -3,12 +3,10 @@ package com.djbooya.speedvolume
 import android.Manifest
 import android.app.Notification
 import android.app.NotificationChannel
-import android.content.Context
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.app.Service
 import android.content.Intent
-import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.location.Location
 import android.location.LocationListener
@@ -40,7 +38,7 @@ class SpeedVolumeService : Service() {
     private lateinit var settings: AppSettings
 
     private val handler = Handler(Looper.getMainLooper())
-    private val screenReceiver = ScreenReceiver()
+    private var wakeLock: PowerManager.WakeLock? = null
 
     private var tier1AboveSince: Long? = null
     private var tier1Engaged: Boolean = false
@@ -80,8 +78,8 @@ class SpeedVolumeService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        DebugLog.d("SpeedVolumeService", "=== SERVICE STARTED v1.7 ===")
-        android.util.Log.d("SpeedVolume", "=== SERVICE STARTED v1.7 ===")
+        DebugLog.d("SpeedVolumeService", "=== SERVICE STARTED v1.8 ===")
+        android.util.Log.d("SpeedVolume", "=== SERVICE STARTED v1.8 ===")
         DebugLog.d("SpeedVolumeService", "onStartCommand called")
         android.util.Log.d("SpeedVolume", "onStartCommand called")
         settings = settingsRepository.load()
@@ -112,8 +110,8 @@ class SpeedVolumeService : Service() {
             it.copy(running = true, speedUnit = settings.speedUnit, hasFix = false)
         }
 
+        acquireWakeLock(powerManager)
         startLocationUpdates()
-        registerScreenReceiver()
         scheduleLocationUpdateCheck()
         scheduleHeartbeatLog()
         ServiceRestartAlarm.scheduleRestartAlarm(this)
@@ -130,13 +128,8 @@ class SpeedVolumeService : Service() {
         android.util.Log.d("SpeedVolume", "=== SERVICE onDestroy called ===")
 
         handler.removeCallbacksAndMessages(null)
-        ScreenReceiver.clearService()
         ServiceRestartAlarm.cancelRestartAlarm(this)
-        try {
-            unregisterReceiver(screenReceiver)
-        } catch (e: Exception) {
-            DebugLog.d("SpeedVolumeService", "Screen receiver not registered: ${e.message}")
-        }
+        releaseWakeLock()
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
             == PackageManager.PERMISSION_GRANTED
         ) {
@@ -181,12 +174,32 @@ class SpeedVolumeService : Service() {
 
     override fun onBind(intent: Intent?) = null
 
-    private fun registerScreenReceiver() {
-        val filter = IntentFilter().apply {
-            addAction(Intent.ACTION_SCREEN_ON)
+    /**
+     * Holds the CPU awake for as long as the service runs, so Doze/idle sleep never
+     * suspends GPS updates or the restart alarm in the first place - the same technique
+     * LlamaLab's Automate app uses (its "Device keep awake" block) to stay reliable in
+     * the background. The head unit is on constant power, so the battery cost is moot.
+     */
+    private fun acquireWakeLock(powerManager: PowerManager) {
+        if (wakeLock?.isHeld == true) return
+        val lock = powerManager.newWakeLock(
+            PowerManager.PARTIAL_WAKE_LOCK,
+            "SpeedVolume:LocationWakeLock"
+        )
+        lock.setReferenceCounted(false)
+        lock.acquire()
+        wakeLock = lock
+        DebugLog.d("SpeedVolumeService", "Wake lock acquired")
+    }
+
+    private fun releaseWakeLock() {
+        wakeLock?.let {
+            if (it.isHeld) {
+                it.release()
+                DebugLog.d("SpeedVolumeService", "Wake lock released")
+            }
         }
-        ScreenReceiver.setService(this)
-        registerReceiver(screenReceiver, filter, Context.RECEIVER_EXPORTED)
+        wakeLock = null
     }
 
     private fun startLocationUpdates() {
@@ -245,12 +258,6 @@ class SpeedVolumeService : Service() {
             android.util.Log.d("SpeedVolume", "HEARTBEAT: Service process alive")
             scheduleHeartbeatLog()
         }, HEARTBEAT_LOG_MS)
-    }
-
-    fun onScreenOn() {
-        handler.post {
-            startLocationUpdates()
-        }
     }
 
     private fun handleLocation(location: Location) {
