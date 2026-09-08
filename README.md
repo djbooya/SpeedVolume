@@ -62,17 +62,28 @@ If checked, the service restarts automatically after a radio reboot (requires lo
 
 The app only ever applies **relative** changes, and it only ever subtracts what it actually
 added. It never stores or restores an absolute volume, so your own adjustments are always
-preserved. With Tier 1 at 5 mph / +1 / 1 s and the radio at volume 10:
+preserved.
 
-| | Action | Volume |
-|---|---|---|
-| | 5 mph held for 2 s → Tier 1 engages | 10 → **11** |
-| 1 | Slow to 4 mph → boost reverts | 11 → **10** |
-| 2 | Turn volume down 1 (to 10), then slow to 4 mph | 10 → **9** |
-| 3 | Turn volume up 2 (to 13), then slow to 4 mph | 13 → **12** |
+**The number on screen will not move when a boost applies.** Head units track their own
+on-screen volume counter and adjust the stream relatively when you turn the knob, so while a
+boost is active the displayed number stays where you left it and the actual output sits above
+it by the boost amount. The two re-converge as soon as the boost is removed.
+
+With Tier 1 at 5 mph / +1 / 1 s, starting from a displayed volume of 10:
+
+| | Action | Displayed | Effective |
+|---|---|---|---|
+| | Sitting still | 10 | 10 |
+| | 5 mph held for 2 s → Tier 1 engages | 10 | **11** |
+| 1 | Slow to 4 mph → boost reverts | 10 | **10** |
+| 2 | From boosted, turn volume down one step … | 9 | 10 |
+| | … then slow to 4 mph | 9 | **9** |
+| 3 | From boosted, turn volume up two steps … | 12 | 13 |
+| | … then slow to 4 mph | 12 | **12** |
 
 In cases 2 and 3 the boost is removed relative to wherever *you* left the volume, so your
-manual change survives. Additional tiers behave identically and stack.
+manual change survives. Additional tiers behave identically and stack — with several tiers
+engaged the displayed number can sit well below the actual output until you slow down.
 
 **A boost is never subtracted unless it was actually applied.** If the volume is already at
 maximum when a tier engages, the boost cannot land — so nothing is subtracted when that tier
