@@ -5,7 +5,7 @@ A lightweight Android foreground service for car head units that dynamically adj
 ## Features
 
 - **GPS-based speed detection** — reads vehicle speed from GPS (compatible with aftermarket head units that lack Google Play Services)
-- **Two-tier volume control** — independently configure speed thresholds and volume boosts for two speed ranges
+- **Four-tier volume control** — independently configure speed thresholds and volume boosts for four speed ranges, which stack
 - **Dwell timer** — adjustable hold time before each tier's boost engages (prevents jitter from speed fluctuations)
 - **Preserves manual adjustments** — if you manually change volume while boosted, the app respects your preference and adjusts relative to your manual setting
 - **Boot auto-start** — optional automatic service start after radio reboot
@@ -34,14 +34,15 @@ Enable/disable the entire speed-volume service.
 **Speed Unit**
 Choose km/h or mph for all threshold values.
 
-**Tier 1 & Tier 2**
+**Tier 1 – Tier 4**
 Each tier has four fields:
 - **Enabled** — checkbox to turn this tier on/off
 - **Speed Threshold** — trigger speed (in selected unit)
 - **Volume Increase** — number of volume steps to add (1–15)
 - **Hold Time** — how long (seconds) to stay at or above threshold before boosting
 
-Tiers stack: if you're above both thresholds, both boosts apply simultaneously.
+Tiers stack: if you're above three thresholds, all three boosts apply simultaneously. Set
+each enabled tier's threshold higher than the one before it (the app warns if you don't).
 
 **Start on Boot**
 If checked, the service restarts automatically after a radio reboot (requires location permission already granted).
@@ -53,11 +54,41 @@ If checked, the service restarts automatically after a radio reboot (requires lo
 ## How It Works
 
 1. Service reads GPS speed every ~1 second
-2. When speed enters a tier's range and stays there for the "hold time," that tier's volume boost applies
-3. When speed drops below the threshold, the boost is reverted
-4. If you manually adjust volume while boosted, the app remembers your adjustment as the new "baseline" and continues to apply/remove boosts relative to that baseline
-5. When the radio resumes from sleep, location updates are re-enabled
-6. Settings are saved to device storage and survive reboots if "start on boot" is enabled
+2. When speed reaches a tier's threshold and stays there for the "hold time," that tier's volume boost applies
+3. When speed drops below the threshold, that tier's boost is reverted
+4. Settings are saved to device storage and survive reboots if "start on boot" is enabled
+
+### Volume arithmetic
+
+The app only ever applies **relative** changes, and it only ever subtracts what it actually
+added. It never stores or restores an absolute volume, so your own adjustments are always
+preserved. With Tier 1 at 5 mph / +1 / 1 s and the radio at volume 10:
+
+| | Action | Volume |
+|---|---|---|
+| | 5 mph held for 2 s → Tier 1 engages | 10 → **11** |
+| 1 | Slow to 4 mph → boost reverts | 11 → **10** |
+| 2 | Turn volume down 1 (to 10), then slow to 4 mph | 10 → **9** |
+| 3 | Turn volume up 2 (to 13), then slow to 4 mph | 13 → **12** |
+
+In cases 2 and 3 the boost is removed relative to wherever *you* left the volume, so your
+manual change survives. Additional tiers behave identically and stack.
+
+**A boost is never subtracted unless it was actually applied.** If the volume is already at
+maximum when a tier engages, the boost cannot land — so nothing is subtracted when that tier
+later disengages, and the volume never drops below where you set it.
+
+### Restarting mid-drive
+
+Every tier starts **disarmed**, and a tier can only engage after the app has seen the vehicle
+*below* that tier's threshold. So if the service restarts while you are already moving:
+
+- Nothing is boosted, and nothing is subtracted — volume stays exactly where the radio has it
+- Restarting at 10 mph with a 5 mph tier does **not** boost
+- That tier boosts only once you drop below 5 mph and then cross it again
+
+This is why a restart mid-drive is safe: a fresh process knows it has applied nothing, so it
+can never "revert" a boost it did not make.
 
 ## Permissions Used
 
@@ -195,6 +226,13 @@ The app writes detailed debug logs to help troubleshoot boot and runtime issues.
 
 ## Release Notes
 
+### v2.0 (Sep 7, 2026)
+- **Added:** Four boost tiers, up from two. All four are independently configurable and stack; tiers 3 and 4 default to disabled. Existing saved settings for tiers 1 and 2 carry over untouched
+- **Added:** Tier **arming** — a tier can only engage after the app has seen the vehicle below that tier's threshold. Restarting the service mid-drive no longer boosts on the first GPS fix; the tier waits for a genuine crossing (drop below the threshold, then cross it again)
+- **Fixed:** A boost is now only subtracted if it was actually applied. Previously, if the volume was already at maximum when a tier engaged, the clamped boost was still recorded as applied and subtracted on disengage — dragging the volume below where the driver had set it. The service now tracks the steps the stream actually moved
+- **Changed:** Tier ordering warning now covers all four tiers, and per-tier state (armed / engaged / applied boost) is included in the heartbeat log for diagnosis
+- **Download:** [SpeedVolume-2.0-debug.apk](https://github.com/djbooya/SpeedVolume/raw/main/app/build/outputs/apk/debug/SpeedVolume-2.0-debug.apk)
+
 ### v1.9 (Sep 1, 2026)
 - **Root cause found:** Log analysis proved the head unit **force-stops** the package on sleep, not merely kills it. A force-stop deletes all pending alarms and blocks all manifest receivers, so none of the five self-restart mechanisms (boot/screen-wake/connectivity/package-update receivers, restart alarm) can ever fire. The decisive evidence: an exact alarm armed 2.7s before death, with battery optimization already exempted, silently vanished — and across 2,881 log lines `SCREEN_ON`, `CONNECTIVITY_CHANGE`, `MY_PACKAGE_REPLACED` and `BootReceiver` fired **zero** times, while every single recovery was a manual app open. This is unrecoverable from inside the app by design
 - **Changed:** `SpeedVolumeService` is now `exported="true"` so an external watchdog can restart it — an explicit component start from another app is the only thing that clears the force-stopped state. See [Running under Automate](#running-under-automate) for setup
@@ -265,8 +303,8 @@ The app writes detailed debug logs to help troubleshoot boot and runtime issues.
 - Verify the speed threshold and hold time are appropriate for your driving
 
 **Manual volume adjustments get overwritten**
-- v1.1+ preserves manual volume changes as the new baseline for future boosts/reverts
-- If the issue persists, restart the service from the settings screen
+- The app only applies relative changes, so a manual adjustment is always preserved — see [Volume arithmetic](#volume-arithmetic)
+- If the volume seems to drift over a drive, check the log for `applied=` values that differ from `requested=`; that means the stream hit its minimum or maximum
 
 ## Building from Source
 
@@ -276,7 +314,7 @@ export JAVA_HOME="/path/to/Android/Studio/jbr"
 ./gradlew assembleDebug
 ```
 
-Output APK: `app/build/outputs/apk/debug/SpeedVolume-1.9-debug.apk`
+Output APK: `app/build/outputs/apk/debug/SpeedVolume-2.0-debug.apk`
 
 For a release build:
 ```bash

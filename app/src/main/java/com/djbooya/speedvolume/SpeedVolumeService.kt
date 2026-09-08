@@ -40,13 +40,29 @@ class SpeedVolumeService : Service() {
     private val handler = Handler(Looper.getMainLooper())
     private var wakeLock: PowerManager.WakeLock? = null
 
-    private var tier1AboveSince: Long? = null
-    private var tier1Engaged: Boolean = false
-    private var tier2AboveSince: Long? = null
-    private var tier2Engaged: Boolean = false
+    /**
+     * Per-tier runtime state. Deliberately not persisted: a fresh process starts every
+     * tier disarmed with nothing applied, which is what makes a restart mid-drive safe.
+     */
+    private class TierState {
+        /**
+         * A tier can only engage after we have seen the vehicle *below* its threshold.
+         * Starting the service while already above a threshold leaves that tier disarmed,
+         * so the boost waits for a real crossing rather than firing on the first fix.
+         */
+        var armed: Boolean = false
+        var aboveSince: Long? = null
+        var engaged: Boolean = false
 
-    private var currentTier1Boost: Int = 0
-    private var currentTier2Boost: Int = 0
+        /**
+         * Volume steps this tier has actually pushed onto the stream - not what it wanted
+         * to push. If a boost was clamped at the max volume it was never applied, so it
+         * must never be subtracted back off.
+         */
+        var appliedBoost: Int = 0
+    }
+
+    private val tierStates = List(AppSettings.TIER_COUNT) { TierState() }
 
     private val locationListener = object : LocationListener {
         override fun onLocationChanged(location: Location) {
@@ -78,16 +94,25 @@ class SpeedVolumeService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        DebugLog.d("SpeedVolumeService", "=== SERVICE STARTED v1.9 ===")
-        android.util.Log.d("SpeedVolume", "=== SERVICE STARTED v1.9 ===")
+        DebugLog.d("SpeedVolumeService", "=== SERVICE STARTED v2.0 ===")
+        android.util.Log.d("SpeedVolume", "=== SERVICE STARTED v2.0 ===")
         DebugLog.d("SpeedVolumeService", "onStartCommand called")
         android.util.Log.d("SpeedVolume", "onStartCommand called")
         settings = settingsRepository.load()
         DebugLog.d("SpeedVolumeService", "Settings loaded: enabled=${settings.masterEnabled}")
         DebugLog.d("SpeedVolumeService", "CONFIG: speedUnit=${settings.speedUnit.name}, startOnBoot=${settings.startOnBoot}")
-        DebugLog.d("SpeedVolumeService", "CONFIG: Tier1 enabled=${settings.tier1.enabled}, threshold=${settings.tier1.speedThreshold}${settings.speedUnit.name}, boost=+${settings.tier1.volumeIncreaseSteps}steps, dwell=${settings.tier1.dwellSeconds}s")
-        DebugLog.d("SpeedVolumeService", "CONFIG: Tier2 enabled=${settings.tier2.enabled}, threshold=${settings.tier2.speedThreshold}${settings.speedUnit.name}, boost=+${settings.tier2.volumeIncreaseSteps}steps, dwell=${settings.tier2.dwellSeconds}s")
-        android.util.Log.d("SpeedVolume", "CONFIG: T1=${settings.tier1.speedThreshold}@${settings.tier1.dwellSeconds}s+${settings.tier1.volumeIncreaseSteps}, T2=${settings.tier2.speedThreshold}@${settings.tier2.dwellSeconds}s+${settings.tier2.volumeIncreaseSteps}")
+        settings.tiers.forEachIndexed { index, tier ->
+            DebugLog.d(
+                "SpeedVolumeService",
+                "CONFIG: Tier${index + 1} enabled=${tier.enabled}, threshold=${tier.speedThreshold}${settings.speedUnit.name}, boost=+${tier.volumeIncreaseSteps}steps, dwell=${tier.dwellSeconds}s"
+            )
+        }
+        android.util.Log.d(
+            "SpeedVolume",
+            "CONFIG: " + settings.tiers.mapIndexed { index, tier ->
+                "T${index + 1}=${tier.speedThreshold}@${tier.dwellSeconds}s+${tier.volumeIncreaseSteps}${if (tier.enabled) "" else "(off)"}"
+            }.joinToString(", ")
+        )
 
         // The service is exported so Automate can restart it, which means a start can
         // arrive at any time - including after the user has switched the app off. Honour
@@ -159,7 +184,9 @@ class SpeedVolumeService : Service() {
             DebugLog.d("SpeedVolumeService", "Location updates stopped")
         }
         revertAllBoosts()
-        ServiceStatus.update { it.copy(running = false, tier1Engaged = false, tier2Engaged = false) }
+        ServiceStatus.update {
+            it.copy(running = false, engagedTiers = List(AppSettings.TIER_COUNT) { false })
+        }
     }
 
     override fun onTrimMemory(level: Int) {
@@ -276,7 +303,12 @@ class SpeedVolumeService : Service() {
 
     private fun scheduleHeartbeatLog() {
         handler.postDelayed({
-            DebugLog.d("SpeedVolumeService", "HEARTBEAT: Service alive, tier1=${tier1Engaged}, tier2=${tier2Engaged}")
+            DebugLog.d(
+                "SpeedVolumeService",
+                "HEARTBEAT: Service alive, " + tierStates.mapIndexed { index, state ->
+                    "tier${index + 1}=${state.engaged}(armed=${state.armed},applied=${state.appliedBoost})"
+                }.joinToString(", ")
+            )
             android.util.Log.d("SpeedVolume", "HEARTBEAT: Service process alive")
             scheduleHeartbeatLog()
         }, HEARTBEAT_LOG_MS)
@@ -295,34 +327,23 @@ class SpeedVolumeService : Service() {
             SpeedUnit.MPH -> speedMps * 2.23694
         }.roundToInt()
         DebugLog.d("SpeedVolumeService", "Speed: $speedInUnit ${settings.speedUnit.name}")
-        android.util.Log.d("SpeedVolume", "Speed: $speedInUnit ${settings.speedUnit.name} | Tier1: engaged=$tier1Engaged, Tier2: engaged=$tier2Engaged")
+        android.util.Log.d(
+            "SpeedVolume",
+            "Speed: $speedInUnit ${settings.speedUnit.name} | engaged=" +
+                tierStates.mapIndexed { index, state -> "T${index + 1}=${state.engaged}" }.joinToString(",")
+        )
 
         val now = SystemClock.elapsedRealtime()
 
-        if (settings.tier1.enabled) {
-            val result = evaluateTier(settings.tier1, speedInUnit, now, tier1AboveSince, tier1Engaged)
-            val stateChanged = tier1Engaged != result.engaged
-            tier1AboveSince = result.aboveSince
-            tier1Engaged = result.engaged
-            if (stateChanged) {
-                DebugLog.d("SpeedVolumeService", "Tier 1: ${if (result.engaged) "ENGAGED (+${settings.tier1.volumeIncreaseSteps})" else "DISENGAGED"}")
-                android.util.Log.d("SpeedVolume", "Tier 1: ${if (result.engaged) "ENGAGED" else "DISENGAGED"}")
+        settings.tiers.forEachIndexed { index, tier ->
+            val state = tierStates[index]
+            val wasEngaged = state.engaged
+            evaluateTier(tier, state, speedInUnit, now)
+            if (wasEngaged != state.engaged) {
+                val what = if (state.engaged) "ENGAGED (+${tier.volumeIncreaseSteps})" else "DISENGAGED"
+                DebugLog.d("SpeedVolumeService", "Tier ${index + 1}: $what")
+                android.util.Log.d("SpeedVolume", "Tier ${index + 1}: $what")
             }
-        } else {
-            tier1Engaged = false
-        }
-
-        if (settings.tier2.enabled) {
-            val result = evaluateTier(settings.tier2, speedInUnit, now, tier2AboveSince, tier2Engaged)
-            val stateChanged = tier2Engaged != result.engaged
-            tier2AboveSince = result.aboveSince
-            tier2Engaged = result.engaged
-            if (stateChanged) {
-                DebugLog.d("SpeedVolumeService", "Tier 2: ${if (result.engaged) "ENGAGED (+${settings.tier2.volumeIncreaseSteps})" else "DISENGAGED"}")
-                android.util.Log.d("SpeedVolume", "Tier 2: ${if (result.engaged) "ENGAGED" else "DISENGAGED"}")
-            }
-        } else {
-            tier2Engaged = false
         }
 
         applyVolumeChanges()
@@ -330,74 +351,91 @@ class SpeedVolumeService : Service() {
             it.copy(
                 currentSpeed = speedInUnit,
                 hasFix = true,
-                tier1Engaged = tier1Engaged,
-                tier2Engaged = tier2Engaged
+                engagedTiers = tierStates.map { state -> state.engaged }
             )
         }
         updateNotification(speedInUnit)
     }
 
-    private data class TierEvalResult(val aboveSince: Long?, val engaged: Boolean)
+    /**
+     * Advances one tier's state machine for the latest speed reading.
+     *
+     * A tier engages only after the vehicle has been at or above its threshold, without
+     * interruption, for the configured dwell - and only if the tier is *armed*, meaning we
+     * have already seen the vehicle below that threshold at some point since this process
+     * started. That arming rule is what stops a mid-drive restart from boosting: restart at
+     * 10 mph with a 5 mph tier and nothing happens until you drop under 5 and cross it again.
+     */
+    private fun evaluateTier(tier: TierConfig, state: TierState, speedInUnit: Int, now: Long) {
+        if (!tier.enabled) {
+            state.engaged = false
+            state.aboveSince = null
+            return
+        }
 
-    private fun evaluateTier(
-        tier: TierConfig,
-        speedInUnit: Int,
-        now: Long,
-        aboveSince: Long?,
-        currentlyEngaged: Boolean
-    ): TierEvalResult {
-        if (speedInUnit >= tier.speedThreshold) {
-            val since = aboveSince ?: now
-            if (!currentlyEngaged && now - since >= tier.dwellSeconds * 1000L) {
-                return TierEvalResult(since, true)
-            }
-            return TierEvalResult(since, currentlyEngaged)
-        } else {
-            return TierEvalResult(null, false)
+        if (speedInUnit < tier.speedThreshold) {
+            // Below the threshold: drop any boost, and arm the tier for the next crossing.
+            state.armed = true
+            state.aboveSince = null
+            state.engaged = false
+            return
+        }
+
+        if (!state.armed) {
+            // Above the threshold, but we have never seen this vehicle below it. Wait.
+            state.aboveSince = null
+            return
+        }
+
+        val since = state.aboveSince ?: now.also { state.aboveSince = it }
+        if (!state.engaged && now - since >= tier.dwellSeconds * 1000L) {
+            state.engaged = true
         }
     }
 
     private fun applyVolumeChanges() {
-        val newTier1Boost = if (tier1Engaged) settings.tier1.volumeIncreaseSteps else 0
-        val newTier2Boost = if (tier2Engaged) settings.tier2.volumeIncreaseSteps else 0
+        settings.tiers.forEachIndexed { index, tier ->
+            val state = tierStates[index]
+            val desiredBoost = if (state.engaged) tier.volumeIncreaseSteps else 0
+            val delta = desiredBoost - state.appliedBoost
+            if (delta == 0) return@forEachIndexed
 
-        val tier1Delta = newTier1Boost - currentTier1Boost
-        val tier2Delta = newTier2Boost - currentTier2Boost
-
-        if (tier1Delta != 0) {
-            adjustVolume(tier1Delta)
-            DebugLog.d("SpeedVolumeService", "Tier 1 volume delta: $tier1Delta")
-            android.util.Log.d("SpeedVolume", "Volume adjustment: tier1 delta=$tier1Delta")
-            currentTier1Boost = newTier1Boost
-        }
-
-        if (tier2Delta != 0) {
-            adjustVolume(tier2Delta)
-            DebugLog.d("SpeedVolumeService", "Tier 2 volume delta: $tier2Delta")
-            android.util.Log.d("SpeedVolume", "Volume adjustment: tier2 delta=$tier2Delta")
-            currentTier2Boost = newTier2Boost
+            val applied = adjustVolume(delta)
+            // Track only what the stream actually moved. If the volume was railed at max
+            // the boost never landed, so we must not subtract it back off later and drag
+            // the volume below where the driver set it.
+            state.appliedBoost += applied
+            DebugLog.d(
+                "SpeedVolumeService",
+                "Tier ${index + 1} volume delta: requested=$delta applied=$applied, tracked boost=${state.appliedBoost}"
+            )
+            android.util.Log.d("SpeedVolume", "Volume adjustment: tier${index + 1} delta=$applied")
         }
     }
 
-    private fun adjustVolume(deltaSteps: Int) {
-        if (deltaSteps == 0) return
+    /** Applies a relative change to the media stream, returning the steps actually moved. */
+    private fun adjustVolume(deltaSteps: Int): Int {
+        if (deltaSteps == 0) return 0
         val max = audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
         val min = audioManager.getStreamMinVolume(AudioManager.STREAM_MUSIC)
         val current = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC)
         val target = (current + deltaSteps).coerceIn(min, max)
-        audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, target, 0)
-        DebugLog.d("SpeedVolumeService", "Volume: $current + $deltaSteps = $target")
-        android.util.Log.d("SpeedVolume", "VOLUME CHANGE: $current -> $target (delta=$deltaSteps)")
+        val applied = target - current
+        if (applied != 0) {
+            audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, target, 0)
+        }
+        DebugLog.d("SpeedVolumeService", "Volume: $current + $deltaSteps = $target (applied=$applied)")
+        android.util.Log.d("SpeedVolume", "VOLUME CHANGE: $current -> $target (requested=$deltaSteps, applied=$applied)")
+        return applied
     }
 
     private fun revertAllBoosts() {
-        if (currentTier1Boost > 0) {
-            adjustVolume(-currentTier1Boost)
-            currentTier1Boost = 0
-        }
-        if (currentTier2Boost > 0) {
-            adjustVolume(-currentTier2Boost)
-            currentTier2Boost = 0
+        tierStates.forEachIndexed { index, state ->
+            if (state.appliedBoost != 0) {
+                DebugLog.d("SpeedVolumeService", "Reverting tier ${index + 1} boost of ${state.appliedBoost}")
+                adjustVolume(-state.appliedBoost)
+                state.appliedBoost = 0
+            }
         }
     }
 
@@ -410,7 +448,8 @@ class SpeedVolumeService : Service() {
         )
         val unitLabel = if (settings.speedUnit == SpeedUnit.KMH) "km/h" else "mph"
         val text = if (speedInUnit != null) {
-            "$speedInUnit $unitLabel" + if (tier1Engaged || tier2Engaged) " · boosted" else ""
+            val boost = tierStates.sumOf { it.appliedBoost }
+            "$speedInUnit $unitLabel" + if (boost != 0) " · boosted +$boost" else ""
         } else {
             getString(R.string.status_waiting)
         }

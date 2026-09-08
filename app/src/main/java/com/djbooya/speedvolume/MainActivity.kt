@@ -9,6 +9,8 @@ import android.os.Build
 import android.os.Bundle
 import android.os.PowerManager
 import android.provider.Settings
+import android.widget.CheckBox
+import android.widget.EditText
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
@@ -53,8 +55,8 @@ class MainActivity : AppCompatActivity() {
         DebugLog.d("MainActivity", "App opened")
 
         applyStatusBarInsetPadding()
-        DebugLog.d("MainActivity", "=== APP OPENED v1.9 ===")
-        android.util.Log.d("SpeedVolume", "=== APP OPENED v1.9 ===")
+        DebugLog.d("MainActivity", "=== APP OPENED v2.0 ===")
+        android.util.Log.d("SpeedVolume", "=== APP OPENED v2.0 ===")
 
         val settings = settingsRepository.load()
         populateFromSettings(settings)
@@ -98,7 +100,10 @@ class MainActivity : AppCompatActivity() {
         binding.buttonSave.setOnClickListener {
             DebugLog.d("MainActivity", "Save button pressed")
             val settings = collectFromUi()
-            DebugLog.d("MainActivity", "Saving settings: enabled=${settings.masterEnabled}, tier1=${settings.tier1.enabled}, tier2=${settings.tier2.enabled}")
+            val tierSummary = settings.tiers.mapIndexed { index, tier ->
+                "tier${index + 1}=${tier.enabled}"
+            }.joinToString(", ")
+            DebugLog.d("MainActivity", "Saving settings: enabled=${settings.masterEnabled}, $tierSummary")
             settingsRepository.save(settings)
             applyServiceState(settings)
             finish()
@@ -143,10 +148,11 @@ class MainActivity : AppCompatActivity() {
                         !state.hasFix -> getString(R.string.status_waiting)
                         else -> {
                             val unit = if (state.speedUnit == SpeedUnit.KMH) "km/h" else "mph"
-                            val tiers = buildString {
-                                if (state.tier1Engaged) append(" · Tier 1 boost")
-                                if (state.tier2Engaged) append(" · Tier 2 boost")
-                            }
+                            val tiers = state.engagedTiers
+                                .mapIndexedNotNull { index, engaged ->
+                                    if (engaged) " · Tier ${index + 1} boost" else null
+                                }
+                                .joinToString("")
                             "${state.currentSpeed} $unit$tiers"
                         }
                     }
@@ -155,46 +161,63 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    /** The four editable fields of one tier row, so the tiers can be handled in a loop. */
+    private class TierViews(
+        val enabled: CheckBox,
+        val speed: EditText,
+        val increase: EditText,
+        val dwell: EditText
+    )
+
+    private fun tierViews(): List<TierViews> = listOf(
+        TierViews(binding.checkTier1Enabled, binding.editTier1Speed, binding.editTier1Increase, binding.editTier1Dwell),
+        TierViews(binding.checkTier2Enabled, binding.editTier2Speed, binding.editTier2Increase, binding.editTier2Dwell),
+        TierViews(binding.checkTier3Enabled, binding.editTier3Speed, binding.editTier3Increase, binding.editTier3Dwell),
+        TierViews(binding.checkTier4Enabled, binding.editTier4Speed, binding.editTier4Increase, binding.editTier4Dwell)
+    )
+
     private fun populateFromSettings(settings: AppSettings) {
         binding.switchMaster.isChecked = settings.masterEnabled
         binding.radioKmh.isChecked = settings.speedUnit == SpeedUnit.KMH
         binding.radioMph.isChecked = settings.speedUnit == SpeedUnit.MPH
 
-        binding.checkTier1Enabled.isChecked = settings.tier1.enabled
-        binding.editTier1Speed.setText(settings.tier1.speedThreshold.toString())
-        binding.editTier1Increase.setText(settings.tier1.volumeIncreaseSteps.toString())
-        binding.editTier1Dwell.setText(settings.tier1.dwellSeconds.toString())
-
-        binding.checkTier2Enabled.isChecked = settings.tier2.enabled
-        binding.editTier2Speed.setText(settings.tier2.speedThreshold.toString())
-        binding.editTier2Increase.setText(settings.tier2.volumeIncreaseSteps.toString())
-        binding.editTier2Dwell.setText(settings.tier2.dwellSeconds.toString())
+        tierViews().forEachIndexed { index, views ->
+            val tier = settings.tiers[index]
+            views.enabled.isChecked = tier.enabled
+            views.speed.setText(tier.speedThreshold.toString())
+            views.increase.setText(tier.volumeIncreaseSteps.toString())
+            views.dwell.setText(tier.dwellSeconds.toString())
+        }
 
         binding.checkStartOnBoot.isChecked = settings.startOnBoot
     }
 
     private fun collectFromUi(): AppSettings {
-        val tier1 = TierConfig(
-            enabled = binding.checkTier1Enabled.isChecked,
-            speedThreshold = binding.editTier1Speed.text.toString().toIntOrNull() ?: 45,
-            volumeIncreaseSteps = binding.editTier1Increase.text.toString().toIntOrNull() ?: 3,
-            dwellSeconds = binding.editTier1Dwell.text.toString().toIntOrNull() ?: 5
-        )
-        val tier2 = TierConfig(
-            enabled = binding.checkTier2Enabled.isChecked,
-            speedThreshold = binding.editTier2Speed.text.toString().toIntOrNull() ?: 90,
-            volumeIncreaseSteps = binding.editTier2Increase.text.toString().toIntOrNull() ?: 4,
-            dwellSeconds = binding.editTier2Dwell.text.toString().toIntOrNull() ?: 5
-        )
-        if (tier1.enabled && tier2.enabled && tier2.speedThreshold <= tier1.speedThreshold) {
-            Toast.makeText(this, R.string.tier2_order_warning, Toast.LENGTH_LONG).show()
+        val tiers = tierViews().mapIndexed { index, views ->
+            val default = SettingsRepository.TIER_DEFAULTS[index]
+            TierConfig(
+                enabled = views.enabled.isChecked,
+                speedThreshold = views.speed.text.toString().toIntOrNull() ?: default.speedThreshold,
+                volumeIncreaseSteps = views.increase.text.toString().toIntOrNull() ?: default.volumeIncreaseSteps,
+                dwellSeconds = views.dwell.text.toString().toIntOrNull() ?: default.dwellSeconds
+            )
         }
+
+        // Boosts stack, so each enabled tier is expected to sit above the previous one.
+        // This is only a warning - the service copes either way.
+        val enabledTiers = tiers.filter { it.enabled }
+        val outOfOrder = enabledTiers.zipWithNext().any { (lower, higher) ->
+            higher.speedThreshold <= lower.speedThreshold
+        }
+        if (outOfOrder) {
+            Toast.makeText(this, R.string.tier_order_warning, Toast.LENGTH_LONG).show()
+        }
+
         return AppSettings(
             masterEnabled = binding.switchMaster.isChecked,
             speedUnit = if (binding.radioMph.isChecked) SpeedUnit.MPH else SpeedUnit.KMH,
             startOnBoot = binding.checkStartOnBoot.isChecked,
-            tier1 = tier1,
-            tier2 = tier2
+            tiers = tiers
         )
     }
 
@@ -260,7 +283,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun updateVersionDisplay() {
-        binding.textVersion.text = "Version: 1.9"
+        binding.textVersion.text = "Version: 2.0"
     }
 
     private fun viewLogs() {

@@ -9,6 +9,8 @@
 
     <string name="tier1_title">Tier 1</string>
     <string name="tier2_title">Tier 2</string>
+    <string name="tier3_title">Tier 3</string>
+    <string name="tier4_title">Tier 4</string>
     <string name="tier_enabled">Enabled</string>
     <string name="tier_speed_label">Speed threshold</string>
     <string name="tier_increase_label">Volume increase (steps)</string>
@@ -17,7 +19,7 @@
     <string name="start_on_boot_label">Start automatically on boot</string>
     <string name="save_button">Save</string>
     <string name="cancel_button">Cancel</string>
-    <string name="version_default">Version: 1.9</string>
+    <string name="version_default">Version: 2.0</string>
     <string name="view_logs_button">View Logs</string>
     <string name="grant_location_button">Grant location permission</string>
     <string name="ignore_battery_button">Disable battery optimization</string>
@@ -30,5 +32,5 @@
     <string name="notification_title">Speed Volume active</string>
 
     <string name="permission_rationale">Location access is required to read vehicle speed from GPS.</string>
-    <string name="tier2_order_warning">Tier 2\'s speed threshold should be higher than Tier 1\'s.</string>
+    <string name="tier_order_warning">Each enabled tier\'s speed threshold should be higher than the tier before it.</string>
 </resources>

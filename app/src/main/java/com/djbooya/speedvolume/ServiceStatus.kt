@@ -8,8 +8,8 @@ data class SpeedState(
     val running: Boolean = false,
     val currentSpeed: Int = 0,
     val speedUnit: SpeedUnit = SpeedUnit.KMH,
-    val tier1Engaged: Boolean = false,
-    val tier2Engaged: Boolean = false,
+    /** Always [AppSettings.TIER_COUNT] entries, ordered tier 1..4. */
+    val engagedTiers: List<Boolean> = List(AppSettings.TIER_COUNT) { false },
     val hasFix: Boolean = false
 )
 

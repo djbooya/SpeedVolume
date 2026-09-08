@@ -13,6 +13,10 @@ data class AppSettings(
     val masterEnabled: Boolean,
     val speedUnit: SpeedUnit,
     val startOnBoot: Boolean,
-    val tier1: TierConfig,
-    val tier2: TierConfig
-)
+    /** Always [TIER_COUNT] entries, ordered tier 1..4. */
+    val tiers: List<TierConfig>
+) {
+    companion object {
+        const val TIER_COUNT = 4
+    }
+}
