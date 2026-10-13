@@ -222,17 +222,25 @@ Debug mode shows it.
 **Turn it on:** tap the **⋮** menu at the top of the app → check **Debug mode**. It takes
 effect immediately — no need to tap Save, and it does not restart the service.
 
-**What you'll see:** a toast every time a tier's boost applies or is removed, showing the volume
-the app believes the radio is outputting. With the radio at 10 and Tier 1 set to +1:
+**What you'll see:** a toast showing the volume the app believes the radio is outputting, every
+time a tier's boost applies or is removed **and** every time you turn the volume yourself. With
+the radio at 10 and Tier 1 set to +1:
 
 | Event | Toast |
 |---|---|
 | Tier 1 engages | `Effective volume: 11 (radio 10 + boost 1)` |
-| Drop below Tier 1 | `Effective volume: 10 (no boost)` |
+| You turn the volume down one step | `Effective volume: 10 (radio 9 + boost 1)` |
+| Drop below Tier 1 | `Effective volume: 9 (no boost)` |
 
-"Radio" is the number the head unit itself is showing. Toasts appear only when a boost changes,
-not on every GPS reading, and when several tiers change at once you get one toast with the final
-level. Every toast is also written to the log as a `Debug toast:` line.
+"Radio" is the number the head unit itself is showing. Toasts appear only when the volume
+actually changes, not on every GPS reading. When several tiers change at once you get one toast
+with the final level, and holding the volume button shows just the latest value rather than
+stacking toasts. Every toast is also written to the log as a `Debug toast:` line, and manual
+changes are logged as `Manual volume change:` lines even when debug mode is off.
+
+> If boost toasts appear but knob turns never produce one, your head unit's volume control
+> isn't going through Android's media volume. The boost arithmetic is unaffected, but the app
+> can't see those knob changes.
 
 **Turn it off** the same way. With debug mode off, no volume toasts are shown at all.
 
@@ -259,6 +267,11 @@ The app writes detailed debug logs to help troubleshoot boot and runtime issues.
 4. Look for ERROR/WARN messages to diagnose issues
 
 ## Release Notes
+
+### v2.2 (Oct 12, 2026)
+- **Added:** Debug mode now also toasts when you change the volume yourself — e.g. turning down one step while boosted shows `Effective volume: 10 (radio 9 + boost 1)`. The service listens for Android's volume-change broadcast and tracks the volume it last set, so its own boost adjustments are not mistaken for manual ones
+- **Added:** Manual volume changes are written to the log (`Manual volume change: 11 -> 10 ...`) whether or not debug mode is on
+- **Download:** [SpeedVolume-2.2-debug.apk](https://github.com/djbooya/SpeedVolume/raw/main/app/build/outputs/apk/debug/SpeedVolume-2.2-debug.apk)
 
 ### v2.1 (Oct 12, 2026)
 - **Added:** Debug mode, toggled from a new **⋮** menu at the top of the app. When on, a toast shows the effective volume every time a boost applies or is removed — e.g. `Effective volume: 11 (radio 10 + boost 1)`. Needed because the head unit's on-screen volume doesn't change when a boost applies. When off, no volume toasts appear. See [Debug Mode](#debug-mode)
@@ -353,7 +366,7 @@ export JAVA_HOME="/path/to/Android/Studio/jbr"
 ./gradlew assembleDebug
 ```
 
-Output APK: `app/build/outputs/apk/debug/SpeedVolume-2.1-debug.apk`
+Output APK: `app/build/outputs/apk/debug/SpeedVolume-2.2-debug.apk`
 
 For a release build:
 ```bash

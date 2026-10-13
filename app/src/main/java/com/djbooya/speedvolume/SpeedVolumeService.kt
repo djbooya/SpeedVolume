@@ -6,7 +6,10 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.app.Service
+import android.content.BroadcastReceiver
+import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.location.Location
 import android.location.LocationListener
@@ -21,6 +24,7 @@ import android.os.SystemClock
 import android.widget.Toast
 import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationCompat
+import androidx.core.content.ContextCompat
 import kotlin.math.roundToInt
 
 /**
@@ -41,6 +45,22 @@ class SpeedVolumeService : Service() {
     private val handler = Handler(Looper.getMainLooper())
     private var wakeLock: PowerManager.WakeLock? = null
     private var debugToast: Toast? = null
+
+    /**
+     * The media volume as of the app's own last change or the last manual change it saw.
+     * Every volume change fires VOLUME_CHANGED_ACTION - the app's own boosts included - so a
+     * broadcast only counts as a manual change if the stream no longer matches this value.
+     */
+    private var lastKnownVolume: Int = -1
+    private var volumeReceiverRegistered = false
+
+    private val volumeReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) {
+            if (intent.getIntExtra(EXTRA_VOLUME_STREAM_TYPE, -1) == AudioManager.STREAM_MUSIC) {
+                onMediaVolumeChanged()
+            }
+        }
+    }
 
     /**
      * Per-tier runtime state. Deliberately not persisted: a fresh process starts every
@@ -96,8 +116,8 @@ class SpeedVolumeService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        DebugLog.d("SpeedVolumeService", "=== SERVICE STARTED v2.1 ===")
-        android.util.Log.d("SpeedVolume", "=== SERVICE STARTED v2.1 ===")
+        DebugLog.d("SpeedVolumeService", "=== SERVICE STARTED v2.2 ===")
+        android.util.Log.d("SpeedVolume", "=== SERVICE STARTED v2.2 ===")
         DebugLog.d("SpeedVolumeService", "onStartCommand called")
         android.util.Log.d("SpeedVolume", "onStartCommand called")
         settings = settingsRepository.load()
@@ -149,6 +169,7 @@ class SpeedVolumeService : Service() {
         }
 
         acquireWakeLock(powerManager)
+        registerVolumeReceiver()
         startLocationUpdates()
         scheduleLocationUpdateCheck()
         scheduleHeartbeatLog()
@@ -179,6 +200,8 @@ class SpeedVolumeService : Service() {
         }
 
         releaseWakeLock()
+        // Before revertAllBoosts() below, so reverting on shutdown isn't reported as manual.
+        unregisterVolumeReceiver()
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
             == PackageManager.PERMISSION_GRANTED
         ) {
@@ -443,6 +466,50 @@ class SpeedVolumeService : Service() {
         debugToast = Toast.makeText(applicationContext, message, Toast.LENGTH_SHORT).also { it.show() }
     }
 
+    private fun registerVolumeReceiver() {
+        if (volumeReceiverRegistered) return
+        lastKnownVolume = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC)
+        ContextCompat.registerReceiver(
+            this,
+            volumeReceiver,
+            IntentFilter(ACTION_VOLUME_CHANGED),
+            ContextCompat.RECEIVER_EXPORTED
+        )
+        volumeReceiverRegistered = true
+        DebugLog.d("SpeedVolumeService", "Volume receiver registered, volume=$lastKnownVolume")
+    }
+
+    private fun unregisterVolumeReceiver() {
+        if (!volumeReceiverRegistered) return
+        try {
+            unregisterReceiver(volumeReceiver)
+        } catch (e: IllegalArgumentException) {
+            DebugLog.d("SpeedVolumeService", "Volume receiver already unregistered")
+        }
+        volumeReceiverRegistered = false
+    }
+
+    /**
+     * Runs on every media volume broadcast, the app's own included.
+     *
+     * The stream is read here rather than taken from the broadcast's extras on purpose: the
+     * app's own changes arrive as delayed broadcasts too, and two tiers moving in the same tick
+     * produce an intermediate value (e.g. 11, then 14). By the time either broadcast lands the
+     * stream already matches [lastKnownVolume], so both are correctly ignored.
+     */
+    private fun onMediaVolumeChanged() {
+        val current = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC)
+        if (current == lastKnownVolume) return
+
+        val boost = tierStates.sumOf { it.appliedBoost }
+        DebugLog.d(
+            "SpeedVolumeService",
+            "Manual volume change: $lastKnownVolume -> $current (boost $boost, radio shows ${current - boost})"
+        )
+        lastKnownVolume = current
+        showDebugVolumeToast()
+    }
+
     /** Applies a relative change to the media stream, returning the steps actually moved. */
     private fun adjustVolume(deltaSteps: Int): Int {
         if (deltaSteps == 0) return 0
@@ -454,6 +521,9 @@ class SpeedVolumeService : Service() {
         if (applied != 0) {
             audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, target, 0)
         }
+        // Record the result so the broadcast this change triggers isn't mistaken for a manual
+        // one. Read back rather than assuming target, in case the device maps the value.
+        lastKnownVolume = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC)
         DebugLog.d("SpeedVolumeService", "Volume: $current + $deltaSteps = $target (applied=$applied)")
         android.util.Log.d("SpeedVolume", "VOLUME CHANGE: $current -> $target (requested=$deltaSteps, applied=$applied)")
         return applied
@@ -517,5 +587,10 @@ class SpeedVolumeService : Service() {
         private const val MIN_UPDATE_MS = 1000L
         private const val LOCATION_UPDATE_RESTART_MS = 60000L
         private const val HEARTBEAT_LOG_MS = 120000L
+
+        // Hidden AudioManager constants - not in the public SDK, but stable since Android 4.0
+        // and how volume-change listeners are conventionally implemented.
+        private const val ACTION_VOLUME_CHANGED = "android.media.VOLUME_CHANGED_ACTION"
+        private const val EXTRA_VOLUME_STREAM_TYPE = "android.media.EXTRA_VOLUME_STREAM_TYPE"
     }
 }
