@@ -9,6 +9,8 @@ import android.os.Build
 import android.os.Bundle
 import android.os.PowerManager
 import android.provider.Settings
+import android.view.Menu
+import android.view.MenuItem
 import android.widget.CheckBox
 import android.widget.EditText
 import android.widget.Toast
@@ -50,13 +52,14 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
+        setSupportActionBar(binding.toolbar)
         settingsRepository = SettingsRepository(this)
         DebugLog.init(this)
         DebugLog.d("MainActivity", "App opened")
 
         applyStatusBarInsetPadding()
-        DebugLog.d("MainActivity", "=== APP OPENED v2.0 ===")
-        android.util.Log.d("SpeedVolume", "=== APP OPENED v2.0 ===")
+        DebugLog.d("MainActivity", "=== APP OPENED v2.1 ===")
+        android.util.Log.d("SpeedVolume", "=== APP OPENED v2.1 ===")
 
         val settings = settingsRepository.load()
         populateFromSettings(settings)
@@ -159,6 +162,30 @@ class MainActivity : AppCompatActivity() {
                 }
             }
         }
+    }
+
+    override fun onCreateOptionsMenu(menu: Menu): Boolean {
+        menuInflater.inflate(R.menu.main_menu, menu)
+        menu.findItem(R.id.action_debug_mode).isChecked = settingsRepository.isDebugMode()
+        return true
+    }
+
+    override fun onOptionsItemSelected(item: MenuItem): Boolean {
+        if (item.itemId != R.id.action_debug_mode) return super.onOptionsItemSelected(item)
+
+        // Applies immediately rather than waiting for Save: the service reads this flag live,
+        // so toggling it neither needs nor triggers a service restart (which would disarm
+        // every tier mid-drive).
+        val enabled = !item.isChecked
+        item.isChecked = enabled
+        settingsRepository.setDebugMode(enabled)
+        DebugLog.d("MainActivity", "Debug mode toggled: $enabled")
+        Toast.makeText(
+            this,
+            if (enabled) R.string.debug_mode_on else R.string.debug_mode_off,
+            Toast.LENGTH_SHORT
+        ).show()
+        return true
     }
 
     /** The four editable fields of one tier row, so the tiers can be handled in a loop. */
@@ -283,7 +310,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun updateVersionDisplay() {
-        binding.textVersion.text = "Version: 2.0"
+        binding.textVersion.text = "Version: 2.1"
     }
 
     private fun viewLogs() {

@@ -213,6 +213,29 @@ After a sleep/wake cycle, open the log (View Logs) and look for a `=== SERVICE S
 line that is **not** preceded by `=== APP OPENED ===`. That is Automate restarting the
 service rather than you doing it by hand.
 
+## Debug Mode
+
+Because the radio's on-screen volume doesn't move when a boost applies (see
+[Volume arithmetic](#volume-arithmetic)), there is no way to see the effective volume by eye.
+Debug mode shows it.
+
+**Turn it on:** tap the **⋮** menu at the top of the app → check **Debug mode**. It takes
+effect immediately — no need to tap Save, and it does not restart the service.
+
+**What you'll see:** a toast every time a tier's boost applies or is removed, showing the volume
+the app believes the radio is outputting. With the radio at 10 and Tier 1 set to +1:
+
+| Event | Toast |
+|---|---|
+| Tier 1 engages | `Effective volume: 11 (radio 10 + boost 1)` |
+| Drop below Tier 1 | `Effective volume: 10 (no boost)` |
+
+"Radio" is the number the head unit itself is showing. Toasts appear only when a boost changes,
+not on every GPS reading, and when several tiers change at once you get one toast with the final
+level. Every toast is also written to the log as a `Debug toast:` line.
+
+**Turn it off** the same way. With debug mode off, no volume toasts are shown at all.
+
 ## Debug Logs
 
 The app writes detailed debug logs to help troubleshoot boot and runtime issues.
@@ -236,6 +259,11 @@ The app writes detailed debug logs to help troubleshoot boot and runtime issues.
 4. Look for ERROR/WARN messages to diagnose issues
 
 ## Release Notes
+
+### v2.1 (Oct 12, 2026)
+- **Added:** Debug mode, toggled from a new **⋮** menu at the top of the app. When on, a toast shows the effective volume every time a boost applies or is removed — e.g. `Effective volume: 11 (radio 10 + boost 1)`. Needed because the head unit's on-screen volume doesn't change when a boost applies. When off, no volume toasts appear. See [Debug Mode](#debug-mode)
+- **Note:** Debug mode applies immediately instead of going through Save, because Save restarts the service and a restart disarms every tier mid-drive
+- **Download:** [SpeedVolume-2.1-debug.apk](https://github.com/djbooya/SpeedVolume/raw/main/app/build/outputs/apk/debug/SpeedVolume-2.1-debug.apk)
 
 ### v2.0 (Sep 7, 2026)
 - **Added:** Four boost tiers, up from two. All four are independently configurable and stack; tiers 3 and 4 default to disabled. Existing saved settings for tiers 1 and 2 carry over untouched
@@ -325,7 +353,7 @@ export JAVA_HOME="/path/to/Android/Studio/jbr"
 ./gradlew assembleDebug
 ```
 
-Output APK: `app/build/outputs/apk/debug/SpeedVolume-2.0-debug.apk`
+Output APK: `app/build/outputs/apk/debug/SpeedVolume-2.1-debug.apk`
 
 For a release build:
 ```bash

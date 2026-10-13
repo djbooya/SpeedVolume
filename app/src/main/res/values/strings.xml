@@ -19,7 +19,7 @@
     <string name="start_on_boot_label">Start automatically on boot</string>
     <string name="save_button">Save</string>
     <string name="cancel_button">Cancel</string>
-    <string name="version_default">Version: 2.0</string>
+    <string name="version_default">Version: 2.1</string>
     <string name="view_logs_button">View Logs</string>
     <string name="grant_location_button">Grant location permission</string>
     <string name="ignore_battery_button">Disable battery optimization</string>
@@ -32,5 +32,11 @@
     <string name="notification_title">Speed Volume active</string>
 
     <string name="permission_rationale">Location access is required to read vehicle speed from GPS.</string>
+    <string name="menu_debug_mode">Debug mode</string>
+    <string name="debug_mode_on">Debug mode on — volume toasts enabled</string>
+    <string name="debug_mode_off">Debug mode off</string>
+    <string name="debug_volume_boosted">Effective volume: %1$d (radio %2$d + boost %3$d)</string>
+    <string name="debug_volume_unboosted">Effective volume: %1$d (no boost)</string>
+
     <string name="tier_order_warning">Each enabled tier\'s speed threshold should be higher than the tier before it.</string>
 </resources>

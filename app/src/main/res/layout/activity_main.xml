@@ -14,6 +14,15 @@
         android:paddingTop="20dp"
         android:paddingBottom="20dp">
 
+        <!-- Hosts the overflow menu (Debug mode). Lives inside contentContainer so it
+             inherits the status-bar inset padding applied in MainActivity. -->
+        <com.google.android.material.appbar.MaterialToolbar
+            android:id="@+id/toolbar"
+            android:layout_width="match_parent"
+            android:layout_height="?attr/actionBarSize"
+            android:layout_marginBottom="8dp"
+            app:contentInsetStart="0dp" />
+
         <com.google.android.material.switchmaterial.SwitchMaterial
             android:id="@+id/switchMaster"
             android:layout_width="match_parent"

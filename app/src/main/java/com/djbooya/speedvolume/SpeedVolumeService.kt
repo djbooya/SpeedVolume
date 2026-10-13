@@ -18,6 +18,7 @@ import android.os.Handler
 import android.os.Looper
 import android.os.PowerManager
 import android.os.SystemClock
+import android.widget.Toast
 import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationCompat
 import kotlin.math.roundToInt
@@ -39,6 +40,7 @@ class SpeedVolumeService : Service() {
 
     private val handler = Handler(Looper.getMainLooper())
     private var wakeLock: PowerManager.WakeLock? = null
+    private var debugToast: Toast? = null
 
     /**
      * Per-tier runtime state. Deliberately not persisted: a fresh process starts every
@@ -94,8 +96,8 @@ class SpeedVolumeService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        DebugLog.d("SpeedVolumeService", "=== SERVICE STARTED v2.0 ===")
-        android.util.Log.d("SpeedVolume", "=== SERVICE STARTED v2.0 ===")
+        DebugLog.d("SpeedVolumeService", "=== SERVICE STARTED v2.1 ===")
+        android.util.Log.d("SpeedVolume", "=== SERVICE STARTED v2.1 ===")
         DebugLog.d("SpeedVolumeService", "onStartCommand called")
         android.util.Log.d("SpeedVolume", "onStartCommand called")
         settings = settingsRepository.load()
@@ -394,11 +396,13 @@ class SpeedVolumeService : Service() {
     }
 
     private fun applyVolumeChanges() {
+        var boostChanged = false
         settings.tiers.forEachIndexed { index, tier ->
             val state = tierStates[index]
             val desiredBoost = if (state.engaged) tier.volumeIncreaseSteps else 0
             val delta = desiredBoost - state.appliedBoost
             if (delta == 0) return@forEachIndexed
+            boostChanged = true
 
             val applied = adjustVolume(delta)
             // Track only what the stream actually moved. If the volume was railed at max
@@ -411,6 +415,32 @@ class SpeedVolumeService : Service() {
             )
             android.util.Log.d("SpeedVolume", "Volume adjustment: tier${index + 1} delta=$applied")
         }
+        // One toast per reading, after every tier has settled, so stacked tiers changing in
+        // the same tick report the final level rather than an intermediate one.
+        if (boostChanged) showDebugVolumeToast()
+    }
+
+    /**
+     * Debug mode only. The head unit's on-screen volume does not move when a boost applies,
+     * so this shows the level the app believes the radio is actually outputting. The flag is
+     * read live, so the menu toggle takes effect without restarting the service.
+     */
+    private fun showDebugVolumeToast() {
+        if (!settingsRepository.isDebugMode()) return
+
+        val effective = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC)
+        val boost = tierStates.sumOf { it.appliedBoost }
+        val message = if (boost != 0) {
+            // effective - boost is the number the radio itself is showing.
+            getString(R.string.debug_volume_boosted, effective, effective - boost, boost)
+        } else {
+            getString(R.string.debug_volume_unboosted, effective)
+        }
+        DebugLog.d("SpeedVolumeService", "Debug toast: $message")
+
+        // Replace rather than queue, so a quick engage/disengage shows the latest value at once.
+        debugToast?.cancel()
+        debugToast = Toast.makeText(applicationContext, message, Toast.LENGTH_SHORT).also { it.show() }
     }
 
     /** Applies a relative change to the media stream, returning the steps actually moved. */

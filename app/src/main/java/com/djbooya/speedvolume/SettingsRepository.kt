@@ -36,8 +36,20 @@ class SettingsRepository(context: Context) {
         editor.apply()
     }
 
+    /**
+     * Diagnostic toggle, kept out of [AppSettings] on purpose: it is flipped from the menu and
+     * takes effect immediately, so the Save/Cancel form must never overwrite it, and changing
+     * it must not restart the service (a restart disarms every tier).
+     */
+    fun isDebugMode(): Boolean = prefs.getBoolean(KEY_DEBUG_MODE, false)
+
+    fun setDebugMode(enabled: Boolean) {
+        prefs.edit().putBoolean(KEY_DEBUG_MODE, enabled).apply()
+    }
+
     companion object {
         private const val PREFS_NAME = "speed_volume_prefs"
+        private const val KEY_DEBUG_MODE = "debug_mode"
         private const val KEY_MASTER_ENABLED = "master_enabled"
         private const val KEY_UNIT = "speed_unit"
         private const val KEY_START_ON_BOOT = "start_on_boot"
