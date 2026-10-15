@@ -7,7 +7,7 @@ A lightweight Android foreground service for car head units that dynamically adj
 - **GPS-based speed detection** — reads vehicle speed from GPS (compatible with aftermarket head units that lack Google Play Services)
 - **Four-tier volume control** — independently configure speed thresholds and volume boosts for four speed ranges, which stack
 - **Dwell timer** — adjustable hold time before each tier's boost engages (prevents jitter from speed fluctuations)
-- **Preserves manual adjustments** — if you manually change volume while boosted, the app respects your preference and adjusts relative to your manual setting
+- **Preserves manual adjustments** — if you change the volume while boosted, the app re-detects the radio's new volume and keeps the boost on top of it
 - **Boot auto-start** — optional automatic service start after radio reboot
 - **Live status display** — shows current speed and active boost tiers in the settings UI
 - **Persistent settings** — all configuration saved across reboots
@@ -60,14 +60,19 @@ If checked, the service restarts automatically after a radio reboot (requires lo
 
 ### Volume arithmetic
 
-The app only ever applies **relative** changes, and it only ever subtracts what it actually
-added. It never stores or restores an absolute volume, so your own adjustments are always
-preserved.
+The app keeps track of two numbers separately: the **radio's volume** (what its display shows)
+and the **boost** the engaged tiers add on top. The output is always set to
+*radio volume + boost* as a single value, rather than stepped up and down.
 
-**The number on screen will not move when a boost applies.** Head units track their own
-on-screen volume counter and adjust the stream relatively when you turn the knob, so while a
-boost is active the displayed number stays where you left it and the actual output sits above
-it by the boost amount. The two re-converge as soon as the boost is removed.
+**The number on screen will not move when a boost applies.** The head unit keeps its own
+on-screen volume counter, so while a boost is active the displayed number stays where you left
+it and the actual output sits above it by the boost amount.
+
+**When you turn the knob, the head unit writes its own on-screen number straight into the
+output** — which wipes any boost out of it. So before every adjustment the app re-reads the
+output, the same way it does when the service starts. If it no longer matches what the app
+last set, the app takes that reading as the radio's new volume and puts the boost back on top
+straight away.
 
 With Tier 1 at 5 mph / +1 / 1 s, starting from a displayed volume of 10:
 
@@ -81,13 +86,20 @@ With Tier 1 at 5 mph / +1 / 1 s, starting from a displayed volume of 10:
 | 3 | From boosted, turn volume up two steps … | 12 | 13 |
 | | … then slow to 4 mph | 12 | **12** |
 
-In cases 2 and 3 the boost is removed relative to wherever *you* left the volume, so your
-manual change survives. Additional tiers behave identically and stack — with several tiers
-engaged the displayed number can sit well below the actual output until you slow down.
+In cases 2 and 3 the boost comes off wherever *you* left the radio, so your manual change
+survives. Additional tiers behave identically and stack — with several tiers engaged the
+displayed number can sit well below the actual output until you slow down.
 
 **A boost is never subtracted unless it was actually applied.** If the volume is already at
-maximum when a tier engages, the boost cannot land — so nothing is subtracted when that tier
-later disengages, and the volume never drops below where you set it.
+maximum when a tier engages, the boost cannot land — so when that tier disengages the output
+returns to the radio's volume and never drops below it.
+
+> **One change the app cannot see:** turning the knob to *exactly* the value the output is
+> already at while boosted. With a +1 boost and the radio at 10 the output is 11; press up once
+> and the head unit writes 11 — the same value, so Android never reports a change. The app still
+> believes the radio is at 10, so when the boost comes off the output drops to 10 while the
+> display shows 11. Pressing again (or any other change) puts it back in sync. This is a limit of
+> what Android reports, not something the app can work around.
 
 ### Restarting mid-drive
 
@@ -268,6 +280,13 @@ The app writes detailed debug logs to help troubleshoot boot and runtime issues.
 
 ## Release Notes
 
+### v2.3 (Oct 15, 2026)
+- **Fixed:** Volume tracking broke after the first manual volume change. Turning the knob makes the head unit write its own on-screen number straight into the output, wiping the boost — but the app still believed the boost was there, so it later subtracted a boost that was gone and dropped the volume below where you set it
+- **Changed:** The app now tracks the radio's volume and the boost separately, and sets the output to *radio + boost* as one value instead of stepping it up and down. Before every adjustment it re-detects the radio's volume the same way it does at startup; if the output no longer matches what the app last set, that reading becomes the radio's new volume and the boost is put back on top immediately — so turning down to 9 while boosted by 1 gives an effective 10
+- **Changed:** Log lines now read `Manual volume change: stream X -> Y` and `Volume set: radio R + boost B = T`, and the heartbeat shows stream, radio volume and boost
+- **Known limit:** a knob change to exactly the value the output is already at can't be seen, because Android doesn't report a change that doesn't change the value — see [Volume arithmetic](#volume-arithmetic)
+- **Download:** [SpeedVolume-2.3-debug.apk](https://github.com/djbooya/SpeedVolume/raw/main/app/build/outputs/apk/debug/SpeedVolume-2.3-debug.apk)
+
 ### v2.2 (Oct 12, 2026)
 - **Added:** Debug mode now also toasts when you change the volume yourself — e.g. turning down one step while boosted shows `Effective volume: 10 (radio 9 + boost 1)`. The service listens for Android's volume-change broadcast and tracks the volume it last set, so its own boost adjustments are not mistaken for manual ones
 - **Added:** Manual volume changes are written to the log (`Manual volume change: 11 -> 10 ...`) whether or not debug mode is on
@@ -355,8 +374,9 @@ The app writes detailed debug logs to help troubleshoot boot and runtime issues.
 - Verify the speed threshold and hold time are appropriate for your driving
 
 **Manual volume adjustments get overwritten**
-- The app only applies relative changes, so a manual adjustment is always preserved — see [Volume arithmetic](#volume-arithmetic)
-- If the volume seems to drift over a drive, check the log for `applied=` values that differ from `requested=`; that means the stream hit its minimum or maximum
+- The app re-detects the radio's volume before every adjustment, so a manual change is kept — see [Volume arithmetic](#volume-arithmetic)
+- Each knob change appears in the log as `Manual volume change: stream X -> Y`. If a knob change has no such line, Android never reported it (see the note under Volume arithmetic)
+- `Volume set: radio R + boost B = T (applied=A)` lines show every adjustment; an `applied` smaller than the boost means the output hit its maximum
 
 ## Building from Source
 
@@ -366,7 +386,7 @@ export JAVA_HOME="/path/to/Android/Studio/jbr"
 ./gradlew assembleDebug
 ```
 
-Output APK: `app/build/outputs/apk/debug/SpeedVolume-2.2-debug.apk`
+Output APK: `app/build/outputs/apk/debug/SpeedVolume-2.3-debug.apk`
 
 For a release build:
 ```bash

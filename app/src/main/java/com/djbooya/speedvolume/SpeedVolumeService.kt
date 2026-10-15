@@ -47,10 +47,20 @@ class SpeedVolumeService : Service() {
     private var debugToast: Toast? = null
 
     /**
-     * The media volume as of the app's own last change or the last manual change it saw.
-     * Every volume change fires VOLUME_CHANGED_ACTION - the app's own boosts included - so a
-     * broadcast only counts as a manual change if the stream no longer matches this value.
+     * Volume tracking. The output is always set as an absolute value, [radioVolume] +
+     * [appliedBoost], rather than nudged up and down, so a knob change can never leave the
+     * app subtracting a boost that is no longer there.
+     *
+     * - [radioVolume]: the radio's own setting - the number its display shows.
+     * - [appliedBoost]: boost steps actually in the stream right now. Can be less than requested
+     *   if the volume was railed at max, and is never subtracted unless it landed.
+     * - [requestedBoost]: the total boost the engaged tiers asked for on the last reading.
+     * - [lastKnownVolume]: what the app last wrote to (or read from) the stream. Anything else
+     *   in the stream means the radio changed it - see [redetectRadioVolume].
      */
+    private var radioVolume: Int = -1
+    private var appliedBoost: Int = 0
+    private var requestedBoost: Int = 0
     private var lastKnownVolume: Int = -1
     private var volumeReceiverRegistered = false
 
@@ -75,13 +85,6 @@ class SpeedVolumeService : Service() {
         var armed: Boolean = false
         var aboveSince: Long? = null
         var engaged: Boolean = false
-
-        /**
-         * Volume steps this tier has actually pushed onto the stream - not what it wanted
-         * to push. If a boost was clamped at the max volume it was never applied, so it
-         * must never be subtracted back off.
-         */
-        var appliedBoost: Int = 0
     }
 
     private val tierStates = List(AppSettings.TIER_COUNT) { TierState() }
@@ -116,8 +119,8 @@ class SpeedVolumeService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        DebugLog.d("SpeedVolumeService", "=== SERVICE STARTED v2.2 ===")
-        android.util.Log.d("SpeedVolume", "=== SERVICE STARTED v2.2 ===")
+        DebugLog.d("SpeedVolumeService", "=== SERVICE STARTED v2.3 ===")
+        android.util.Log.d("SpeedVolume", "=== SERVICE STARTED v2.3 ===")
         DebugLog.d("SpeedVolumeService", "onStartCommand called")
         android.util.Log.d("SpeedVolume", "onStartCommand called")
         settings = settingsRepository.load()
@@ -330,9 +333,10 @@ class SpeedVolumeService : Service() {
         handler.postDelayed({
             DebugLog.d(
                 "SpeedVolumeService",
-                "HEARTBEAT: Service alive, " + tierStates.mapIndexed { index, state ->
-                    "tier${index + 1}=${state.engaged}(armed=${state.armed},applied=${state.appliedBoost})"
-                }.joinToString(", ")
+                "HEARTBEAT: Service alive, stream=${audioManager.getStreamVolume(AudioManager.STREAM_MUSIC)} " +
+                    "radio=$radioVolume boost=$appliedBoost, " + tierStates.mapIndexed { index, state ->
+                        "tier${index + 1}=${state.engaged}(armed=${state.armed})"
+                    }.joinToString(", ")
             )
             android.util.Log.d("SpeedVolume", "HEARTBEAT: Service process alive")
             scheduleHeartbeatLog()
@@ -418,29 +422,76 @@ class SpeedVolumeService : Service() {
         }
     }
 
+    /**
+     * Brings the stream to [radioVolume] + the engaged tiers' boost. Called on every GPS
+     * reading and on every volume broadcast; does nothing unless the boost changed or the
+     * radio's volume did.
+     */
     private fun applyVolumeChanges() {
-        var boostChanged = false
-        settings.tiers.forEachIndexed { index, tier ->
-            val state = tierStates[index]
-            val desiredBoost = if (state.engaged) tier.volumeIncreaseSteps else 0
-            val delta = desiredBoost - state.appliedBoost
-            if (delta == 0) return@forEachIndexed
-            boostChanged = true
+        // Re-detect first, every time, so the adjustment is made from the radio's current
+        // volume - never a stale one.
+        val radioChanged = redetectRadioVolume()
 
-            val applied = adjustVolume(delta)
-            // Track only what the stream actually moved. If the volume was railed at max
-            // the boost never landed, so we must not subtract it back off later and drag
-            // the volume below where the driver set it.
-            state.appliedBoost += applied
-            DebugLog.d(
-                "SpeedVolumeService",
-                "Tier ${index + 1} volume delta: requested=$delta applied=$applied, tracked boost=${state.appliedBoost}"
-            )
-            android.util.Log.d("SpeedVolume", "Volume adjustment: tier${index + 1} delta=$applied")
+        val desired = settings.tiers.indices.sumOf { index ->
+            if (tierStates[index].engaged) settings.tiers[index].volumeIncreaseSteps else 0
         }
-        // One toast per reading, after every tier has settled, so stacked tiers changing in
+        val boostChanged = desired != requestedBoost
+        requestedBoost = desired
+        if (!boostChanged && !radioChanged) return
+
+        val max = audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
+        val min = audioManager.getStreamMinVolume(AudioManager.STREAM_MUSIC)
+        val target = (radioVolume + desired).coerceIn(min, max)
+        writeStream(target)
+        // Only what actually landed. If the radio was railed at max the boost never applied,
+        // so disengaging returns to radioVolume without ever dropping below it.
+        appliedBoost = target - radioVolume
+
+        DebugLog.d(
+            "SpeedVolumeService",
+            "Volume set: radio $radioVolume + boost $desired = $target (applied=$appliedBoost)"
+        )
+        android.util.Log.d("SpeedVolume", "VOLUME: radio $radioVolume + boost $appliedBoost = $target")
+
+        // One toast per change, after every tier has settled, so stacked tiers changing in
         // the same tick report the final level rather than an intermediate one.
-        if (boostChanged) showDebugVolumeToast()
+        showDebugVolumeToast()
+    }
+
+    /**
+     * Re-detects the radio's volume with the same reading taken when the service starts.
+     *
+     * If the stream still holds what the app last wrote, nothing else has touched it and it is
+     * still [radioVolume] + [appliedBoost]. If it holds anything else, the radio changed it - and
+     * this head unit writes its own on-screen value straight into the stream when the knob is
+     * turned, wiping any boost. So the new reading *is* the radio's volume, with no boost in it.
+     *
+     * Returns true if the radio's volume changed.
+     */
+    private fun redetectRadioVolume(): Boolean {
+        if (lastKnownVolume < 0) return false // tracking not started yet
+        val current = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC)
+        if (current == lastKnownVolume) return false
+
+        DebugLog.d(
+            "SpeedVolumeService",
+            "Manual volume change: stream $lastKnownVolume -> $current. Radio volume re-detected as $current " +
+                "(was $radioVolume); boost of $appliedBoost no longer in stream"
+        )
+        radioVolume = current
+        appliedBoost = 0
+        lastKnownVolume = current
+        return true
+    }
+
+    /** Sets the stream to an absolute value and records it, so its own broadcast is ignored. */
+    private fun writeStream(target: Int) {
+        val before = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC)
+        if (target != before) {
+            audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, target, 0)
+        }
+        // Read back rather than assuming target, in case the device maps the value.
+        lastKnownVolume = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC)
     }
 
     /**
@@ -452,10 +503,8 @@ class SpeedVolumeService : Service() {
         if (!settingsRepository.isDebugMode()) return
 
         val effective = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC)
-        val boost = tierStates.sumOf { it.appliedBoost }
-        val message = if (boost != 0) {
-            // effective - boost is the number the radio itself is showing.
-            getString(R.string.debug_volume_boosted, effective, effective - boost, boost)
+        val message = if (appliedBoost != 0) {
+            getString(R.string.debug_volume_boosted, effective, radioVolume, appliedBoost)
         } else {
             getString(R.string.debug_volume_unboosted, effective)
         }
@@ -466,9 +515,18 @@ class SpeedVolumeService : Service() {
         debugToast = Toast.makeText(applicationContext, message, Toast.LENGTH_SHORT).also { it.show() }
     }
 
+    /**
+     * Starts volume tracking: the initial detection of the radio's volume, then the broadcast
+     * receiver. Guarded, because onStartCommand re-runs every few minutes (restart alarm,
+     * Automate) on a live service - re-detecting the baseline then would mistake a boosted
+     * stream for the radio's own volume.
+     */
     private fun registerVolumeReceiver() {
         if (volumeReceiverRegistered) return
-        lastKnownVolume = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC)
+        radioVolume = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC)
+        appliedBoost = 0
+        requestedBoost = 0
+        lastKnownVolume = radioVolume
         ContextCompat.registerReceiver(
             this,
             volumeReceiver,
@@ -490,53 +548,27 @@ class SpeedVolumeService : Service() {
     }
 
     /**
-     * Runs on every media volume broadcast, the app's own included.
+     * Runs on every media volume broadcast, the app's own included. Its own writes are
+     * recognised because the stream then matches [lastKnownVolume]; anything else is a knob
+     * change, and the boost is re-applied on top of the radio's new volume straight away -
+     * so lowering the radio to 9 while boosted by 1 gives an effective 10.
      *
-     * The stream is read here rather than taken from the broadcast's extras on purpose: the
-     * app's own changes arrive as delayed broadcasts too, and two tiers moving in the same tick
-     * produce an intermediate value (e.g. 11, then 14). By the time either broadcast lands the
-     * stream already matches [lastKnownVolume], so both are correctly ignored.
+     * The stream is read in [redetectRadioVolume] rather than taken from the broadcast's
+     * extras: the app's own writes arrive as delayed broadcasts, and by the time one lands the
+     * stream already matches [lastKnownVolume].
      */
     private fun onMediaVolumeChanged() {
-        val current = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC)
-        if (current == lastKnownVolume) return
-
-        val boost = tierStates.sumOf { it.appliedBoost }
-        DebugLog.d(
-            "SpeedVolumeService",
-            "Manual volume change: $lastKnownVolume -> $current (boost $boost, radio shows ${current - boost})"
-        )
-        lastKnownVolume = current
-        showDebugVolumeToast()
+        applyVolumeChanges()
     }
 
-    /** Applies a relative change to the media stream, returning the steps actually moved. */
-    private fun adjustVolume(deltaSteps: Int): Int {
-        if (deltaSteps == 0) return 0
-        val max = audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
-        val min = audioManager.getStreamMinVolume(AudioManager.STREAM_MUSIC)
-        val current = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC)
-        val target = (current + deltaSteps).coerceIn(min, max)
-        val applied = target - current
-        if (applied != 0) {
-            audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, target, 0)
-        }
-        // Record the result so the broadcast this change triggers isn't mistaken for a manual
-        // one. Read back rather than assuming target, in case the device maps the value.
-        lastKnownVolume = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC)
-        DebugLog.d("SpeedVolumeService", "Volume: $current + $deltaSteps = $target (applied=$applied)")
-        android.util.Log.d("SpeedVolume", "VOLUME CHANGE: $current -> $target (requested=$deltaSteps, applied=$applied)")
-        return applied
-    }
-
+    /** Returns the stream to the radio's own volume, removing only boost that actually landed. */
     private fun revertAllBoosts() {
-        tierStates.forEachIndexed { index, state ->
-            if (state.appliedBoost != 0) {
-                DebugLog.d("SpeedVolumeService", "Reverting tier ${index + 1} boost of ${state.appliedBoost}")
-                adjustVolume(-state.appliedBoost)
-                state.appliedBoost = 0
-            }
-        }
+        redetectRadioVolume()
+        if (appliedBoost == 0) return
+        DebugLog.d("SpeedVolumeService", "Reverting boost of $appliedBoost to radio volume $radioVolume")
+        writeStream(radioVolume)
+        appliedBoost = 0
+        requestedBoost = 0
     }
 
     private fun buildNotification(speedInUnit: Int?): Notification {
@@ -548,8 +580,7 @@ class SpeedVolumeService : Service() {
         )
         val unitLabel = if (settings.speedUnit == SpeedUnit.KMH) "km/h" else "mph"
         val text = if (speedInUnit != null) {
-            val boost = tierStates.sumOf { it.appliedBoost }
-            "$speedInUnit $unitLabel" + if (boost != 0) " · boosted +$boost" else ""
+            "$speedInUnit $unitLabel" + if (appliedBoost != 0) " · boosted +$appliedBoost" else ""
         } else {
             getString(R.string.status_waiting)
         }
